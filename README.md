@@ -81,7 +81,7 @@ Fully self-hashed:
 {"previous":"E172jdGSSxO1jzThzmGPgY5ocmklgBlYGAjF3l8Ar540","name":"grippoponkey","stuff_count":43,"data_byte_v":[1,2,4,8,16,32,64,128],"self_hash":"En4Oq_qmG3jvzA3O-F3hEUmNxWi1VsDS0yoPkC8aebwU"}
 ```
 
-### Example 2 -- Multiple Self-Signature Slots
+### Example 2 -- Multiple Self-Hash Slots
 
 Here is an example involving a data structure that has multiple self-hash slots.  In particular, there is a URI, part of which is formed by the self-hash, as well as a stand-alone self-hash field.  The URI is initially populated with an arbitrary placeholder value (it just happens to be the hash function placeholder in this example), as the URI data structure, in order to be simpler, does not use `Option` semantics like in the previous example.  However, the self-hash process will replace it with the appropriate placeholder value.  In this case, the hash function being used is SHA-512, indicated by the `"0G"` prefix.
 
