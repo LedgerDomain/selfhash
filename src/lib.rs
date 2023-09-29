@@ -17,7 +17,14 @@ pub use crate::sha256::{SHA256Hash, SHA256HashInner};
 #[cfg(feature = "sha-512")]
 pub use crate::sha512::{SHA512Hash, SHA512HashInner};
 pub use crate::{
-    blake3::Blake3, hash::Hash, hash_bytes::HashBytes, hash_function::HashFunction, hasher::Hasher,
-    keri_hash::KERIHash, named_hash_function::NamedHashFunction, self_hashable::SelfHashable,
-    sha256::SHA256, sha512::SHA512,
+    blake3::Blake3,
+    hash::Hash,
+    hash_bytes::HashBytes,
+    hash_function::HashFunction,
+    hasher::Hasher,
+    keri_hash::KERIHash,
+    named_hash_function::NamedHashFunction,
+    self_hashable::{write_digest_data_using_jcs, SelfHashable},
+    sha256::SHA256,
+    sha512::SHA512,
 };

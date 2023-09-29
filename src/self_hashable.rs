@@ -1,8 +1,40 @@
 use crate::{Hash, Hasher};
 
+/// This is the canonical implementation of the SelfHashable::write_digest_data
+/// method for when the SelfHashable type implements Clone and the desired desired serialization
+/// format is JSON Canonicalization Scheme (JCS).  Simply call this method from your implementation of
+/// SelfHashable::write_digest_data.
+#[cfg(feature = "jcs")]
+pub fn write_digest_data_using_jcs<S: Clone + SelfHashable + serde::Serialize>(
+    self_hashable: &S,
+    mut hasher: &mut dyn Hasher,
+) {
+    let mut c = self_hashable.clone();
+    c.set_self_hash_slots_to(hasher.hash_function().placeholder_hash());
+    // Use JCS to produce canonical output.  The `&mut hasher` ridiculousness is because
+    // serde_json_canonicalizer::to_writer uses a generic impl of std::io::Write and therefore
+    // implicitly requires the `Sized` trait.  Therefore passing in a reference to the reference
+    // achieves the desired effect.
+    serde_json_canonicalizer::to_writer(&c, &mut hasher).unwrap();
+}
+
+/// This trait allows a self-hashing procedure to be defined for a data type.  The data type must implement
+/// the following required methods:
+/// - self_hash_oi: defines the self-hash slots.
+/// - set_self_hash_slots_to: sets all the self-hash slots to the given hash.
+/// - write_digest_data: writes the data to be hashed into the hasher, using the appropriate placeholder
+///   for the self-hash slots).
+///
+/// An easy default for the implementation of write_digest_data is provided by the write_digest_data_using_jcs
+/// function, which can be called from your implementation of write_digest_data if your type implements
+/// Clone and serde::Serialize and the desired serialization format is JSON Canonicalization Scheme (JCS).
 pub trait SelfHashable {
     /// This should feed the content of this object into the hasher in the order that it should be hashed,
-    /// writing placeholders for any self-hash slots that have not yet been computed.
+    /// writing placeholders for the self-hash slots.
+    ///
+    /// If the implementing type implements Clone and serde::Serialize, and the desired serialization
+    /// format is JSON Canonicalization Scheme (JCS), then you can simply call write_digest_data_using_jcs
+    /// from your implementation of this method.
     fn write_digest_data(&self, hasher: &mut dyn Hasher);
     /// Returns an iterator over the self-hash slots in this object.
     fn self_hash_oi<'a, 'b: 'a>(
