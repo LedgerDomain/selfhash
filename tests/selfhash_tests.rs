@@ -108,12 +108,15 @@ pub struct SimpleDataHashBytes {
 }
 
 impl selfhash::SelfHashable for SimpleDataHashBytes {
-    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) {
-        // let hash_function = hasher.hash_function();
+    fn write_digest_data(&self, mut hasher: &mut dyn selfhash::Hasher) {
+        // NOTE: This is a generic JSON Canonicalization Scheme (JCS) serialization based implementation.
         let mut c = self.clone();
         c.set_self_hash_slots_to(hasher.hash_function().placeholder_hash());
-        // Not sure if serde_json always produces the same output...
-        serde_json::to_writer(hasher, &c).expect("pass");
+        // Use JCS to produce canonical output.  The `&mut hasher` ridiculousness is because
+        // serde_json_canonicalizer::to_writer uses a generic impl of std::io::Write and therefore
+        // implicitly requires the `Sized` trait.  Therefore passing in a reference to the reference
+        // achieves the desired effect.
+        serde_json_canonicalizer::to_writer(&c, &mut hasher).unwrap();
     }
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
@@ -148,8 +151,13 @@ fn test_self_hashable_hash_bytes() {
         };
         // println!("simple_data_0 before self-hash: {:#?}", simple_data_0);
         println!(
-            "simple_data_0 before self-hash JSON: {}",
-            serde_json::to_string(&simple_data_0).expect("pass")
+            "simple_data_0 before self-hash as JCS: {}",
+            std::str::from_utf8(
+                serde_json_canonicalizer::to_vec(&simple_data_0)
+                    .expect("pass")
+                    .as_slice()
+            )
+            .expect("pass")
         );
         use selfhash::SelfHashable;
         simple_data_0
@@ -157,8 +165,13 @@ fn test_self_hashable_hash_bytes() {
             .expect("pass");
         // println!("simple_data_0 after self-hash: {:#?}", simple_data_0);
         println!(
-            "simple_data_0 after self-hash JSON: {}",
-            serde_json::to_string(&simple_data_0).expect("pass")
+            "simple_data_0 after self-hash as JCS: {}",
+            std::str::from_utf8(
+                serde_json_canonicalizer::to_vec(&simple_data_0)
+                    .expect("pass")
+                    .as_slice()
+            )
+            .expect("pass")
         );
         simple_data_0.verify_self_hashes().expect("pass");
         println!("simple_data_0 self self-hash verified!");
@@ -176,16 +189,26 @@ fn test_self_hashable_hash_bytes() {
         };
         // println!("simple_data_1 before self-hash: {:#?}", simple_data_1);
         println!(
-            "simple_data_1 before self-hash JSON: {}",
-            serde_json::to_string(&simple_data_1).expect("pass")
+            "simple_data_1 before self-hash as JCS: {}",
+            std::str::from_utf8(
+                serde_json_canonicalizer::to_vec(&simple_data_1)
+                    .expect("pass")
+                    .as_slice()
+            )
+            .expect("pass")
         );
         simple_data_1
             .self_hash(hash_function.new_hasher())
             .expect("pass");
         // println!("simple_data_1 after self-hash: {:#?}", simple_data_1);
         println!(
-            "simple_data_1 after self-hash JSON: {}",
-            serde_json::to_string(&simple_data_1).expect("pass")
+            "simple_data_1 after self-hash as JCS: {}",
+            std::str::from_utf8(
+                serde_json_canonicalizer::to_vec(&simple_data_1)
+                    .expect("pass")
+                    .as_slice()
+            )
+            .expect("pass")
         );
         simple_data_1.verify_self_hashes().expect("pass");
         println!("simple_data_1 self self-hash verified!");
@@ -196,24 +219,26 @@ fn test_self_hashable_hash_bytes() {
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct SimpleDataKERIHash {
     /// Self-hash of the previous SimpleDataKERIHash.
-    // #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "previous")]
     pub previous_o: Option<selfhash::KERIHash<'static>>,
     pub name: String,
     pub stuff_count: u32,
     pub data_byte_v: Vec<u8>,
-    // #[serde(skip_serializing_if = "Option::is_none")]
+    /// Self-hash of this data.
     #[serde(rename = "self_hash")]
     pub self_hash_o: Option<selfhash::KERIHash<'static>>,
 }
 
 impl selfhash::SelfHashable for SimpleDataKERIHash {
-    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) {
-        // let hash_function = hasher.hash_function();
+    fn write_digest_data(&self, mut hasher: &mut dyn selfhash::Hasher) {
+        // NOTE: This is a generic JSON Canonicalization Scheme (JCS) serialization based implementation.
         let mut c = self.clone();
         c.set_self_hash_slots_to(hasher.hash_function().placeholder_hash());
-        // Not sure if serde_json always produces the same output...
-        serde_json::to_writer(hasher, &c).expect("pass");
+        // Use JCS to produce canonical output.  The `&mut hasher` ridiculousness is because
+        // serde_json_canonicalizer::to_writer uses a generic impl of std::io::Write and therefore
+        // implicitly requires the `Sized` trait.  Therefore passing in a reference to the reference
+        // achieves the desired effect.
+        serde_json_canonicalizer::to_writer(&c, &mut hasher).unwrap();
     }
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
@@ -248,18 +273,28 @@ fn test_self_hashable_keri_hash() {
         };
         // println!("simple_data_0 before self-hash: {:#?}", simple_data_0);
         println!(
-            "simple_data_0 before self-hash JSON: {}",
-            serde_json::to_string(&simple_data_0).expect("pass")
+            "simple_data_0 before self-hash as JCS: {}",
+            std::str::from_utf8(
+                serde_json_canonicalizer::to_vec(&simple_data_0)
+                    .expect("pass")
+                    .as_slice()
+            )
+            .expect("pass")
         );
         use selfhash::SelfHashable;
         simple_data_0
             .self_hash(hash_function.new_hasher())
             .expect("pass");
-        // println!("simple_data_0 after self-hash: {:#?}", simple_data_0);
         println!(
-            "simple_data_0 after self-hash JSON: {}",
-            serde_json::to_string(&simple_data_0).expect("pass")
+            "simple_data_0 after self-hash as JCS: {}",
+            std::str::from_utf8(
+                serde_json_canonicalizer::to_vec(&simple_data_0)
+                    .expect("pass")
+                    .as_slice()
+            )
+            .expect("pass")
         );
+        assert!(simple_data_0.self_hash_o.is_some());
         simple_data_0.verify_self_hashes().expect("pass");
         println!("simple_data_0 self self-hash verified!");
         // Let's make sure that altering the data causes the verification to fail.
@@ -274,19 +309,32 @@ fn test_self_hashable_keri_hash() {
             data_byte_v: vec![0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80],
             self_hash_o: None,
         };
-        // println!("simple_data_1 before self-hash: {:#?}", simple_data_1);
+        assert!(simple_data_1.previous_o.is_some());
         println!(
-            "simple_data_1 before self-hash JSON: {}",
-            serde_json::to_string(&simple_data_1).expect("pass")
+            "simple_data_1 before self-hash as JCS: {}",
+            std::str::from_utf8(
+                serde_json_canonicalizer::to_vec(&simple_data_1)
+                    .expect("pass")
+                    .as_slice()
+            )
+            .expect("pass")
         );
+        assert!(simple_data_1.previous_o.is_some());
         simple_data_1
             .self_hash(hash_function.new_hasher())
             .expect("pass");
+        assert!(simple_data_1.previous_o.is_some());
         // println!("simple_data_1 after self-hash: {:#?}", simple_data_1);
         println!(
-            "simple_data_1 after self-hash JSON: {}",
-            serde_json::to_string(&simple_data_1).expect("pass")
+            "simple_data_1 after self-hash as JCS: {}",
+            std::str::from_utf8(
+                serde_json_canonicalizer::to_vec(&simple_data_1)
+                    .expect("pass")
+                    .as_slice()
+            )
+            .expect("pass")
         );
+        assert!(simple_data_1.self_hash_o.is_some());
         simple_data_1.verify_self_hashes().expect("pass");
         println!("simple_data_1 self self-hash verified!");
     }
@@ -398,12 +446,15 @@ pub struct FancyData {
 }
 
 impl selfhash::SelfHashable for FancyData {
-    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) {
-        // let hash_function = hasher.hash_function();
+    fn write_digest_data(&self, mut hasher: &mut dyn selfhash::Hasher) {
+        // NOTE: This is a generic JSON Canonicalization Scheme (JCS) serialization based implementation.
         let mut c = self.clone();
         c.set_self_hash_slots_to(hasher.hash_function().placeholder_hash());
-        // Not sure if serde_json always produces the same output...
-        serde_json::to_writer(hasher, &c).expect("pass");
+        // Use JCS to produce canonical output.  The `&mut hasher` ridiculousness is because
+        // serde_json_canonicalizer::to_writer uses a generic impl of std::io::Write and therefore
+        // implicitly requires the `Sized` trait.  Therefore passing in a reference to the reference
+        // achieves the desired effect.
+        serde_json_canonicalizer::to_writer(&c, &mut hasher).unwrap();
     }
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
@@ -446,16 +497,26 @@ fn test_multiple_self_hash_slots() {
             self_hash_o: None,
         };
         println!(
-            "fancy_data before self-hash: {}",
-            serde_json::to_string(&fancy_data).expect("pass")
+            "fancy_data before self-hash as JCS: {}",
+            std::str::from_utf8(
+                serde_json_canonicalizer::to_vec(&fancy_data)
+                    .expect("pass")
+                    .as_slice()
+            )
+            .expect("pass")
         );
         use selfhash::SelfHashable;
         fancy_data
             .self_hash(hash_function.new_hasher())
             .expect("pass");
         println!(
-            "fancy_data after self-hash: {}",
-            serde_json::to_string(&fancy_data).expect("pass")
+            "fancy_data after self-hash as JCS: {}",
+            std::str::from_utf8(
+                serde_json_canonicalizer::to_vec(&fancy_data)
+                    .expect("pass")
+                    .as_slice()
+            )
+            .expect("pass")
         );
         fancy_data.verify_self_hashes().expect("pass");
     }

@@ -45,40 +45,40 @@ The `--all-features` is necessary for now.
 
 ### Example 1 -- Simplest
 
-Here is a simple example in which a data structure has a single self-hash slot.  Here is the primary data, with self-hash slot unpopulated:
+Here is a simple example in which a data structure has a single self-hash slot, and where the digest is produced using the JSON Canonicalization Scheme (JCS).  Here is the primary data, with self-hash slot unpopulated:
 
 ```json
-{"previous":null,"name":"hippodonkey","stuff_count":42,"data_byte_v":[1,2,3],"self_hash":null}
+{"data_byte_v":[1,2,3],"name":"hippodonkey","previous":null,"self_hash":null,"stuff_count":42}
 ```
 
 During the self-hashing process, the `self_hash` field is set to the appropriate placeholder value (in this case the prefix `"E"` indicating use of the BLAKE3 hash function, followed by the base64url-no-pad-encoding of 256 bits of 0):
 
 ```json
-{"previous":null,"name":"hippodonkey","stuff_count":42,"data_byte_v":[1,2,3],"self_hash":"EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}
+{"data_byte_v":[1,2,3],"name":"hippodonkey","previous":null,"self_hash":"EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","stuff_count":42}
 ```
 
 After the self-hashing process, the `self_hash` field has been populated:
 
 ```json
-{"previous":null,"name":"hippodonkey","stuff_count":42,"data_byte_v":[1,2,3],"self_hash":"E172jdGSSxO1jzThzmGPgY5ocmklgBlYGAjF3l8Ar540"}
+{"data_byte_v":[1,2,3],"name":"hippodonkey","previous":null,"self_hash":"Eyl1ZXOe_nOufcpisvlW1ZUeXKnY_kIKOOljEhMAd5zw","stuff_count":42}
 ```
 
 Now, a second data structure is created which includes the self-hash of the previous data, thereby forming a microledger.  With self-hash unpopulated:
 
 ```json
-{"previous":"E172jdGSSxO1jzThzmGPgY5ocmklgBlYGAjF3l8Ar540","name":"grippoponkey","stuff_count":43,"data_byte_v":[1,2,4,8,16,32,64,128],"self_hash":null}
+{"data_byte_v":[1,2,4,8,16,32,64,128],"name":"grippoponkey","previous":"Eyl1ZXOe_nOufcpisvlW1ZUeXKnY_kIKOOljEhMAd5zw","self_hash":null,"stuff_count":43}
 ```
 
-With placeholder hash:
+With placeholder hash (note that "previous" is not populated with the placeholder, since "previous" is part of the primary data):
 
 ```json
-{"previous":"E172jdGSSxO1jzThzmGPgY5ocmklgBlYGAjF3l8Ar540","name":"grippoponkey","stuff_count":43,"data_byte_v":[1,2,4,8,16,32,64,128],"self_hash":"EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}
+{"data_byte_v":[1,2,4,8,16,32,64,128],"name":"grippoponkey","previous":"Eyl1ZXOe_nOufcpisvlW1ZUeXKnY_kIKOOljEhMAd5zw","self_hash":"EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","stuff_count":43}
 ```
 
 Fully self-hashed:
 
 ```json
-{"previous":"E172jdGSSxO1jzThzmGPgY5ocmklgBlYGAjF3l8Ar540","name":"grippoponkey","stuff_count":43,"data_byte_v":[1,2,4,8,16,32,64,128],"self_hash":"En4Oq_qmG3jvzA3O-F3hEUmNxWi1VsDS0yoPkC8aebwU"}
+{"data_byte_v":[1,2,4,8,16,32,64,128],"name":"grippoponkey","previous":"Eyl1ZXOe_nOufcpisvlW1ZUeXKnY_kIKOOljEhMAd5zw","self_hash":"Ew4c7NoEyI842yfIxBakoWgCYI6v4nAQp1Z1OtHzOiFQ","stuff_count":43}
 ```
 
 ### Example 2 -- Multiple Self-Hash Slots
@@ -88,19 +88,19 @@ Here is an example involving a data structure that has multiple self-hash slots.
 Initial data.  There are two self-hash slots -- one in part of the "uri" field, and one in the "self_hash" field:
 
 ```json
-{"uri":"https://example.com/fancy_data/0GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","stuff":"hippopotapotamus","things":[1,2,3,4,5],"self_hash":null}
+{"self_hash":null,"stuff":"hippopotapotamus","things":[1,2,3,4,5],"uri":"https://example.com/fancy_data/0GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}
 ```
 
 With placeholder hash (note that both self-hash slots have been populated with the placeholder hash):
 
 ```json
-{"uri":"https://example.com/fancy_data/0GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","stuff":"hippopotapotamus","things":[1,2,3,4,5],"self_hash":"0GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}
+{"self_hash":"0GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","stuff":"hippopotapotamus","things":[1,2,3,4,5],"uri":"https://example.com/fancy_data/0GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}
 ```
 
 Fully self-hashed (note that both self-hash slots have the same self-hash value):
 
 ```json
-{"uri":"https://example.com/fancy_data/0G7SVDUy5LznZrCWms17XvST_1S34ZW5NKfkT62SLSb4xnMjdHxlvfHOVUf9mjmxDcAVb0fwV6EhbVlXGXb8eAig","stuff":"hippopotapotamus","things":[1,2,3,4,5],"self_hash":"0G7SVDUy5LznZrCWms17XvST_1S34ZW5NKfkT62SLSb4xnMjdHxlvfHOVUf9mjmxDcAVb0fwV6EhbVlXGXb8eAig"}
+{"self_hash":"0GEyiMb8AWE0tEuIMpVGlndac7nZYNUBESFid1kYHD_8g6Y7O5Gv7Su6HmWokBSQ6THLvK8wYg_WAEq9RDbDWkZw","stuff":"hippopotapotamus","things":[1,2,3,4,5],"uri":"https://example.com/fancy_data/0GEyiMb8AWE0tEuIMpVGlndac7nZYNUBESFid1kYHD_8g6Y7O5Gv7Su6HmWokBSQ6THLvK8wYg_WAEq9RDbDWkZw"}
 ```
 
 ## References
