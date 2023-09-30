@@ -1,6 +1,6 @@
 [package]
 name = "selfhash"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Victor Dods <victor.dods@gmail.com>"]
 edition = "2021"
 
@@ -9,13 +9,13 @@ edition = "2021"
 blake3 = ["dep:blake3"]
 # This provides the default implementation of the SelfHashable::write_digest_data method for when a
 # SelfHashable implements Clone and the desired serialization format is JSON Canonicalization Scheme (JCS).
-jcs = ["dep:serde_json_canonicalizer"]
+jcs = ["dep:serde", "dep:serde_json_canonicalizer"]
 # This enables serde support for for KERIHash and NamedHashFunction types.
 serde = ["dep:serde", "dep:serde_with"]
-# This enables support for the SHA_256 hash function via the sha2 crate.
-sha-256 = ["dep:lazy_static", "dep:sha2"]
-# This enables support for the SHA_512 hash function via the sha2 crate.
-sha-512 = ["dep:lazy_static", "dep:sha2"]
+# This enables support for the SHA-256 hash function via the sha2 crate.
+sha-256 = ["dep:digest", "dep:lazy_static", "dep:sha2"]
+# This enables support for the SHA-512 hash function via the sha2 crate.
+sha-512 = ["dep:digest", "dep:lazy_static", "dep:sha2"]
 
 [dependencies]
 base64 = { version = "0.21.4", default-features = false }
@@ -28,7 +28,7 @@ derive_more = { version = "0.99.17", default-features = false, features = [
     "from",
     "into",
 ] }
-digest = "0.10.7"
+digest = { version = "0.10.7", optional = true }
 lazy_static = { version = "1.4", optional = true, default-features = false }
 serde = { version = "1.0", optional = true, default-features = false, features = [
     "alloc",
