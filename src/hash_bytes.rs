@@ -64,6 +64,12 @@ impl<'a> HashBytes<'a> {
     }
 }
 
+impl AsRef<[u8]> for HashBytes<'_> {
+    fn as_ref(&self) -> &[u8] {
+        self.hash_byte_v.as_ref()
+    }
+}
+
 impl std::ops::Deref for HashBytes<'_> {
     type Target = [u8];
     fn deref(&self) -> &Self::Target {
