@@ -126,9 +126,7 @@ impl std::str::FromStr for KERIHash<'_> {
                 base64_decode_512_bits(data, &mut buffer)?;
                 Ok(Self(Cow::Owned(s.to_string())))
             }
-            _ => {
-                panic!("this should not be possible");
-            }
+            _ => Err("KERIHash::from_str failed: invalid length"),
         }
     }
 }
