@@ -1,3 +1,23 @@
+use std::borrow::Cow;
+
+#[test]
+fn test_serialize_deserialize_keri_hash() {
+    let keri_hash =
+        selfhash::KERIHash::try_from("EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").expect("pass");
+    let keri_hash_json = serde_json_canonicalizer::to_vec(&keri_hash).expect("pass");
+    assert_eq!(
+        std::str::from_utf8(keri_hash_json.as_slice()).expect("pass"),
+        "\"EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\""
+    );
+    let keri_hash_deserialized: selfhash::KERIHash =
+        serde_json::from_slice(keri_hash_json.as_slice()).expect("pass");
+    println!(
+        "keri_hash_deserialized is borrowed: {}",
+        matches!(keri_hash_deserialized.as_cow(), Cow::Borrowed(_))
+    );
+    assert_eq!(keri_hash, keri_hash_deserialized);
+}
+
 pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn selfhash::Hash> {
     match hash_bytes.named_hash_function {
         selfhash::NamedHashFunction::BLAKE3 => {
@@ -395,7 +415,7 @@ impl std::str::FromStr for URIWithHash {
             .find(|c| c == '?' || c == '#')
             .unwrap_or_else(|| hash_and_beyond.len());
         let (hash_str, after_hash) = hash_and_beyond.split_at(hash_end);
-        let hash = selfhash::KERIHash::from_str(hash_str)?;
+        let hash = selfhash::KERIHash::try_from(hash_str.to_string())?;
         // Parse query, if present.
         let (query_o, after_query) = if after_hash.starts_with('?') {
             let query_end = after_hash.find('#').unwrap_or_else(|| after_hash.len());

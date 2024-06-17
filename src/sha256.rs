@@ -92,14 +92,14 @@ impl Hash for SHA256Hash {
             self.to_hash_bytes() == other.to_hash_bytes()
         }
     }
+    /// This won't allocate, since the hash bytes are already in memory.
     fn to_hash_bytes(&self) -> crate::HashBytes<'_> {
         crate::HashBytes {
             named_hash_function: self.hash_function().named_hash_function(),
-            // This allocation is potentially not necessary.
-            hash_byte_v: self.as_slice().into(),
+            hash_byte_v: std::borrow::Cow::Borrowed(self.as_slice()),
         }
     }
-    /// This might allocate, and potentially can be implemented without allocations.
+    /// This will allocate, since the hash bytes have to be converted into a KERIHash.
     fn to_keri_hash(&self) -> crate::KERIHash<'_> {
         self.to_hash_bytes()
             .to_keri_hash()

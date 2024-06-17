@@ -77,7 +77,6 @@ impl std::ops::Deref for HashBytes<'_> {
     }
 }
 
-// TODO: Figure out why impl doesn't work with generic lifetime 'a
 impl Hash for HashBytes<'static> {
     fn as_any(&self) -> &dyn std::any::Any {
         self

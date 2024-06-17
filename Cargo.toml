@@ -1,6 +1,6 @@
 [package]
 name = "selfhash"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Victor Dods <victor.dods@gmail.com>"]
 edition = "2021"
 
@@ -44,6 +44,7 @@ sha2 = { version = "0.10.7", optional = true, default-features = false, features
 
 [dev-dependencies]
 serde = { version = "1.0", default-features = false, features = ["derive"] }
+serde_json = "1.0"
 serde_json_canonicalizer = "0.2.0"
 serde_with = { version = "3.3.0", default-features = false, features = [
     "macros",
