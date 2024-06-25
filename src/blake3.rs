@@ -81,7 +81,7 @@ impl Hash for blake3::Hash {
         }
     }
     /// This will allocate, since the hash bytes have to be converted into a KERIHash.
-    fn to_keri_hash(&self) -> crate::KERIHash<'_> {
+    fn to_keri_hash(&self) -> crate::KERIHash {
         self.to_hash_bytes()
             .to_keri_hash()
             .expect("programmer error")

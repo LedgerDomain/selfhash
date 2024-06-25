@@ -9,6 +9,7 @@ use crate::{Hash, HashFunction, KERIHash, NamedHashFunction};
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct HashBytes<'a> {
     pub named_hash_function: NamedHashFunction,
+    #[serde(borrow)]
     pub hash_byte_v: Cow<'a, [u8]>,
 }
 
@@ -25,7 +26,7 @@ impl<'a> HashBytes<'a> {
             hash_byte_v: Cow::Owned(self.hash_byte_v.to_vec()),
         }
     }
-    pub fn to_keri_hash(&self) -> Result<KERIHash<'static>, &'static str> {
+    pub fn to_keri_hash(&self) -> Result<KERIHash, &'static str> {
         if self.hash_byte_v.len() != self.named_hash_function.placeholder_bytes().len() {
             return Err(
                 "hash_byte_v length does not match expected placeholder bytes length of the NamedHashFunction",
@@ -60,7 +61,7 @@ impl<'a> HashBytes<'a> {
                 panic!("this should not be possible");
             }
         };
-        Ok(KERIHash(Cow::Owned(keri_hash_string)))
+        Ok(KERIHash(keri_hash_string))
     }
 }
 
@@ -95,7 +96,7 @@ impl Hash for HashBytes<'static> {
     fn to_hash_bytes(&self) -> HashBytes<'_> {
         self.clone()
     }
-    fn to_keri_hash(&self) -> KERIHash<'_> {
+    fn to_keri_hash(&self) -> KERIHash {
         self.to_keri_hash().expect("this should not fail")
     }
 }

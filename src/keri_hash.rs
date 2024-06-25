@@ -5,21 +5,12 @@ use crate::{base64_decode_256_bits, base64_decode_512_bits, Hash, HashBytes, Nam
 /// This is a concise, ASCII-only representation of a hash value, which comes from the KERI spec.
 #[derive(Clone, Debug, derive_more::Display, Eq, Hash, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-pub struct KERIHash<'a>(#[cfg_attr(feature = "serde", serde(borrow))] pub(crate) Cow<'a, str>);
+pub struct KERIHash(pub(crate) String);
 
-impl<'a> KERIHash<'a> {
-    pub fn as_cow(&self) -> &Cow<'a, str> {
-        &self.0
-    }
-    pub fn into_owned<'b: 'a>(self) -> KERIHash<'b> {
-        KERIHash(Cow::Owned(self.0.into_owned()))
-    }
-    pub fn to_owned<'b: 'a>(&self) -> KERIHash<'b> {
-        KERIHash(Cow::Owned(self.0.to_string()))
-    }
+impl KERIHash {
     /// This returns the prefix portion of the KERIHash string, which defines which hash function
     /// was used to generate the hash.
-    pub fn keri_prefix<'b: 'a>(&'b self) -> &'a str {
+    pub fn keri_prefix(&self) -> &str {
         match self.len() {
             44 => {
                 // NOTE: This assumes that 44 chars imply a 1-char prefix and a 43-char base64 string.
@@ -35,7 +26,7 @@ impl<'a> KERIHash<'a> {
         }
     }
     /// This returns the data portion of the KERIHash string, which is the base64url-no-pad-encoded hash bytes.
-    pub fn data<'b: 'a>(&'b self) -> &'a str {
+    pub fn data(&self) -> &str {
         match self.len() {
             44 => {
                 // NOTE: This assumes that 44 chars imply a 1-char prefix and a 43-char base64 string.
@@ -87,33 +78,33 @@ impl<'a> KERIHash<'a> {
     }
 }
 
-impl<'a> std::ops::Deref for KERIHash<'a> {
+impl std::ops::Deref for KERIHash {
     type Target = str;
     fn deref(&self) -> &Self::Target {
         self.0.as_ref()
     }
 }
 
-impl std::str::FromStr for KERIHash<'_> {
+impl std::str::FromStr for KERIHash {
     type Err = &'static str;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         validate_keri_hash_string(s)?;
-        Ok(Self(s.to_string().into()))
+        Ok(Self(s.to_string()))
     }
 }
-impl<'a, 's: 'a> TryFrom<&'s str> for KERIHash<'a> {
+impl TryFrom<&str> for KERIHash {
     type Error = &'static str;
-    fn try_from(value: &'s str) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         validate_keri_hash_string(value)?;
-        Ok(Self(value.into()))
+        Ok(Self(value.to_string()))
     }
 }
 
-impl<'a> TryFrom<String> for KERIHash<'a> {
+impl TryFrom<String> for KERIHash {
     type Error = &'static str;
     fn try_from(value: String) -> Result<Self, Self::Error> {
         validate_keri_hash_string(value.as_str())?;
-        Ok(Self(value.into()))
+        Ok(Self(value))
     }
 }
 
@@ -152,7 +143,7 @@ fn validate_keri_hash_string(s: &str) -> Result<(), &'static str> {
     Ok(())
 }
 
-impl Hash for KERIHash<'static> {
+impl Hash for KERIHash {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
@@ -177,7 +168,7 @@ impl Hash for KERIHash<'static> {
     fn to_hash_bytes(&self) -> HashBytes<'_> {
         self.to_hash_bytes()
     }
-    fn to_keri_hash(&self) -> KERIHash<'_> {
+    fn to_keri_hash(&self) -> KERIHash {
         self.clone()
     }
 }

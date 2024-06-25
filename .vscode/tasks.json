@@ -9,7 +9,8 @@
 				"check",
 				"--package",
 				"selfhash",
-				"--all-features"
+				"--all-features",
+				"--tests"
 			],
 			"presentation": {
 				"clear": true,

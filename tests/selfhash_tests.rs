@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 #[test]
 fn test_serialize_deserialize_keri_hash() {
     let keri_hash =
@@ -11,10 +9,6 @@ fn test_serialize_deserialize_keri_hash() {
     );
     let keri_hash_deserialized: selfhash::KERIHash =
         serde_json::from_slice(keri_hash_json.as_slice()).expect("pass");
-    println!(
-        "keri_hash_deserialized is borrowed: {}",
-        matches!(keri_hash_deserialized.as_cow(), Cow::Borrowed(_))
-    );
     assert_eq!(keri_hash, keri_hash_deserialized);
 }
 
@@ -69,7 +63,7 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
 }
 
 /// Parses the known-to-selfhash hashes via their KERIHash.
-pub fn hash_from_keri_hash(keri_hash: &selfhash::KERIHash<'_>) -> Box<dyn selfhash::Hash> {
+pub fn hash_from_keri_hash(keri_hash: &selfhash::KERIHash) -> Box<dyn selfhash::Hash> {
     hash_from_hash_bytes(keri_hash.to_hash_bytes())
 }
 
@@ -233,13 +227,13 @@ fn test_self_hashable_hash_bytes() {
 pub struct SimpleDataKERIHash {
     /// Self-hash of the previous SimpleDataKERIHash.
     #[serde(rename = "previous")]
-    pub previous_o: Option<selfhash::KERIHash<'static>>,
+    pub previous_o: Option<selfhash::KERIHash>,
     pub name: String,
     pub stuff_count: u32,
     pub data_byte_v: Vec<u8>,
     /// Self-hash of this data.
     #[serde(rename = "self_hash")]
-    pub self_hash_o: Option<selfhash::KERIHash<'static>>,
+    pub self_hash_o: Option<selfhash::KERIHash>,
 }
 
 impl selfhash::SelfHashable for SimpleDataKERIHash {
@@ -256,7 +250,7 @@ impl selfhash::SelfHashable for SimpleDataKERIHash {
         ))
     }
     fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) {
-        self.self_hash_o = Some(hash.to_keri_hash().into_owned());
+        self.self_hash_o = Some(hash.to_keri_hash());
     }
 }
 
@@ -359,7 +353,7 @@ pub struct URIWithHash {
     // and therefore might just be equal to "/".
     pub pre_hash_path: String,
     // Self-hash in KERIHash form, which is renderable as a URL-safe string.
-    pub hash: selfhash::KERIHash<'static>,
+    pub hash: selfhash::KERIHash,
     pub query_o: Option<String>,
     pub fragment_o: Option<String>,
 }
@@ -448,7 +442,7 @@ pub struct FancyData {
     pub stuff: String,
     pub things: Vec<u32>,
     #[serde(rename = "self_hash")]
-    pub self_hash_o: Option<selfhash::KERIHash<'static>>,
+    pub self_hash_o: Option<selfhash::KERIHash>,
 }
 
 impl selfhash::SelfHashable for FancyData {
