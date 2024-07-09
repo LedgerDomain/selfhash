@@ -8,6 +8,9 @@ use crate::{base64_decode_256_bits, base64_decode_512_bits, Hash, HashBytes, Nam
 pub struct KERIHash(pub(crate) String);
 
 impl KERIHash {
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
     /// This returns the prefix portion of the KERIHash string, which defines which hash function
     /// was used to generate the hash.
     pub fn keri_prefix(&self) -> &str {
