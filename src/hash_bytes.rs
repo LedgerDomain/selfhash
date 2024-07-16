@@ -9,7 +9,7 @@ use crate::{Hash, HashFunction, KERIHash, NamedHashFunction};
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct HashBytes<'a> {
     pub named_hash_function: NamedHashFunction,
-    #[serde(borrow)]
+    #[cfg_attr(feature = "serde", serde(borrow))]
     pub hash_byte_v: Cow<'a, [u8]>,
 }
 
