@@ -30,6 +30,7 @@ derive_more = { version = "0.99.17", default-features = false, features = [
 ] }
 digest = { version = "0.10.7", optional = true }
 lazy_static = { version = "1.4", optional = true, default-features = false }
+pneutype = "0.2.0"
 serde = { version = "1.0", optional = true, default-features = false, features = [
     "alloc",
     "derive",
@@ -50,3 +51,7 @@ serde_with = { version = "3.3.0", default-features = false, features = [
     "macros",
 ] }
 serial_test = "2.0.0"
+
+[patch.crates-io]
+# pneutype = { git = "https://github.com/vdods/pneutype", rev = "pneutype-v0.2.0" }
+pneutype = { path = "../../vdods/pneutype/pneutype" }

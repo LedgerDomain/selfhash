@@ -58,23 +58,19 @@ impl Hasher for blake3::Hasher {
 
 #[cfg(feature = "blake3")]
 impl Hash for blake3::Hash {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
     fn hash_function(&self) -> &dyn HashFunction {
         &Blake3
     }
     fn equals(&self, other: &dyn Hash) -> bool {
-        if let Some(other_blake3_hash) = other.as_any().downcast_ref::<blake3::Hash>() {
-            // If the other is also a blake3::Hash, then we can compare directly.
-            self.as_bytes() == other_blake3_hash.as_bytes()
-        } else {
-            // Otherwise need to convert into a common type.
-            self.to_hash_bytes() == other.to_hash_bytes()
+        // Check the hash function directly before resorting to converting.
+        if !self.hash_function().equals(other.hash_function()) {
+            return false;
         }
+        // Convert to common type for comparison.
+        self.to_hash_bytes() == other.to_hash_bytes()
     }
     /// This won't allocate, since the hash bytes are already in memory.
-    fn to_hash_bytes(&self) -> crate::HashBytes<'_> {
+    fn to_hash_bytes(&self) -> crate::HashBytes {
         crate::HashBytes {
             named_hash_function: self.hash_function().named_hash_function(),
             hash_byte_v: std::borrow::Cow::Borrowed(self.as_bytes().as_slice()),

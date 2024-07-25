@@ -5,6 +5,7 @@ mod hash_bytes;
 mod hash_function;
 mod hasher;
 mod keri_hash;
+mod keri_hash_str;
 mod named_hash_function;
 mod self_hashable;
 mod sha256;
@@ -20,6 +21,6 @@ pub use crate::sha256::{SHA256Hash, SHA256HashInner};
 pub use crate::sha512::{SHA512Hash, SHA512HashInner};
 pub use crate::{
     blake3::Blake3, hash::Hash, hash_bytes::HashBytes, hash_function::HashFunction, hasher::Hasher,
-    keri_hash::KERIHash, named_hash_function::NamedHashFunction, self_hashable::SelfHashable,
-    sha256::SHA256, sha512::SHA512,
+    keri_hash::KERIHash, keri_hash_str::KERIHashStr, named_hash_function::NamedHashFunction,
+    self_hashable::SelfHashable, sha256::SHA256, sha512::SHA512,
 };

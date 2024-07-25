@@ -9,9 +9,9 @@ pub trait HashFunction {
     fn keri_prefix(&self) -> &'static str;
     /// Returns the appropriate hash value to use as the placeholder when self-hashing.
     fn placeholder_hash(&self) -> &'static dyn Hash;
-    /// Simply compares the keri_prefix value of self with that of other.
+    /// Simply compares the named_hash_function value of self with that of other.
     fn equals(&self, other: &dyn HashFunction) -> bool {
-        self.keri_prefix() == other.keri_prefix()
+        self.named_hash_function() == other.named_hash_function()
     }
     fn new_hasher(&self) -> Box<dyn Hasher>;
 }

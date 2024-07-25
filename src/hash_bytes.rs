@@ -61,7 +61,8 @@ impl<'a> HashBytes<'a> {
                 panic!("this should not be possible");
             }
         };
-        Ok(KERIHash(keri_hash_string))
+        Ok(KERIHash::try_from(keri_hash_string)
+            .expect("programmer error: should be a valid KERIHash by construction"))
     }
 }
 
@@ -78,10 +79,8 @@ impl std::ops::Deref for HashBytes<'_> {
     }
 }
 
+// TODO: Try to impl for arbitrary lifetime now that std::any::Any trait is no longer required.
 impl Hash for HashBytes<'static> {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
     fn hash_function(&self) -> &dyn HashFunction {
         &self.named_hash_function
     }
@@ -93,7 +92,7 @@ impl Hash for HashBytes<'static> {
         let other_hash_bytes = other.to_hash_bytes();
         self.hash_byte_v == other_hash_bytes.hash_byte_v
     }
-    fn to_hash_bytes(&self) -> HashBytes<'_> {
+    fn to_hash_bytes(&self) -> HashBytes {
         self.clone()
     }
     fn to_keri_hash(&self) -> KERIHash {
