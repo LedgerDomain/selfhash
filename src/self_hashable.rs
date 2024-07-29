@@ -98,6 +98,13 @@ pub trait SelfHashable {
     fn self_hash(&mut self, hasher_b: Box<dyn Hasher>) -> Result<&dyn Hash, &'static str> {
         let self_hash = self.compute_self_hash(hasher_b)?;
         self.set_self_hash_slots_to(self_hash.as_ref());
+        debug_assert!(self.self_hash_oi().all(|hash_o| -> bool {
+            if let Some(hash) = hash_o.as_ref() {
+                !hash.equals(hash.hash_function().placeholder_hash())
+            } else {
+                false
+            }
+        }), "programmer error: implementation of set_self_hash_slots_to did not set all self-hash slots.");
         let first_self_hash = self.self_hash_oi().nth(0).unwrap().unwrap();
         Ok(first_self_hash)
     }

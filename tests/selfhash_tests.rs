@@ -63,7 +63,7 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
 }
 
 /// Parses the known-to-selfhash hashes via their KERIHash.
-pub fn hash_from_keri_hash(keri_hash: &selfhash::KERIHash) -> Box<dyn selfhash::Hash> {
+pub fn hash_from_keri_hash(keri_hash: &selfhash::KERIHashStr) -> Box<dyn selfhash::Hash> {
     hash_from_hash_bytes(keri_hash.to_hash_bytes())
 }
 
@@ -250,7 +250,7 @@ impl selfhash::SelfHashable for SimpleDataKERIHash {
         ))
     }
     fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) {
-        self.self_hash_o = Some(hash.to_keri_hash());
+        self.self_hash_o = Some(hash.to_keri_hash().into_owned());
     }
 }
 
@@ -461,7 +461,7 @@ impl selfhash::SelfHashable for FancyData {
         )
     }
     fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) {
-        let keri_hash = hash.to_keri_hash().to_owned();
+        let keri_hash = hash.to_keri_hash().into_owned();
         self.uri.hash = keri_hash.clone();
         self.self_hash_o = Some(keri_hash);
     }
@@ -481,7 +481,7 @@ fn test_multiple_self_hash_slots() {
                 scheme: "https".to_string(),
                 authority_o: Some("example.com".to_string()),
                 pre_hash_path: "/fancy_data/".to_string(),
-                hash: hash_function.placeholder_hash().to_keri_hash(),
+                hash: hash_function.placeholder_hash().to_keri_hash().into_owned(),
                 query_o: None,
                 fragment_o: None,
             },

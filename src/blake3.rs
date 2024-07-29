@@ -61,25 +61,10 @@ impl Hash for blake3::Hash {
     fn hash_function(&self) -> &dyn HashFunction {
         &Blake3
     }
-    fn equals(&self, other: &dyn Hash) -> bool {
-        // Check the hash function directly before resorting to converting.
-        if !self.hash_function().equals(other.hash_function()) {
-            return false;
-        }
-        // Convert to common type for comparison.
-        self.to_hash_bytes() == other.to_hash_bytes()
-    }
-    /// This won't allocate, since the hash bytes are already in memory.
-    fn to_hash_bytes(&self) -> crate::HashBytes {
+    fn to_hash_bytes<'s: 'h, 'h>(&'s self) -> crate::HashBytes<'h> {
         crate::HashBytes {
             named_hash_function: self.hash_function().named_hash_function(),
             hash_byte_v: std::borrow::Cow::Borrowed(self.as_bytes().as_slice()),
         }
-    }
-    /// This will allocate, since the hash bytes have to be converted into a KERIHash.
-    fn to_keri_hash(&self) -> crate::KERIHash {
-        self.to_hash_bytes()
-            .to_keri_hash()
-            .expect("programmer error")
     }
 }

@@ -79,23 +79,11 @@ impl std::ops::Deref for HashBytes<'_> {
     }
 }
 
-// TODO: Try to impl for arbitrary lifetime now that std::any::Any trait is no longer required.
-impl Hash for HashBytes<'static> {
+impl Hash for HashBytes<'_> {
     fn hash_function(&self) -> &dyn HashFunction {
         &self.named_hash_function
     }
-    fn equals(&self, other: &dyn Hash) -> bool {
-        // Check the hash function directly before resorting to converting to HashBytes.
-        if !self.named_hash_function.equals(other.hash_function()) {
-            return false;
-        }
-        let other_hash_bytes = other.to_hash_bytes();
-        self.hash_byte_v == other_hash_bytes.hash_byte_v
-    }
-    fn to_hash_bytes(&self) -> HashBytes {
+    fn to_hash_bytes<'s: 'h, 'h>(&'s self) -> HashBytes<'h> {
         self.clone()
-    }
-    fn to_keri_hash(&self) -> KERIHash {
-        self.to_keri_hash().expect("this should not fail")
     }
 }

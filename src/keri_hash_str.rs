@@ -1,8 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{
-    base64_decode_256_bits, base64_decode_512_bits, Hash, HashBytes, KERIHash, NamedHashFunction,
-};
+use crate::{base64_decode_256_bits, base64_decode_512_bits, Hash, HashBytes, NamedHashFunction};
 
 /// This is the str-based analog to KERIHash.
 #[derive(Debug, Eq, Hash, PartialEq, pneutype::PneuStr)]
@@ -99,13 +97,13 @@ impl Hash for KERIHashStr {
             return false;
         }
         let other_keri_hash = other.to_keri_hash();
-        self == other_keri_hash.as_keri_hash_str()
+        self == other_keri_hash.as_ref()
     }
-    fn to_hash_bytes(&self) -> HashBytes {
+    fn to_hash_bytes<'s: 'h, 'h>(&'s self) -> HashBytes<'h> {
         self.to_hash_bytes()
     }
-    fn to_keri_hash(&self) -> KERIHash {
-        self.to_owned()
+    fn to_keri_hash<'s: 'h, 'h>(&'s self) -> std::borrow::Cow<'h, KERIHashStr> {
+        std::borrow::Cow::Borrowed(self)
     }
 }
 
