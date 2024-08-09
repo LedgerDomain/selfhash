@@ -77,13 +77,15 @@ impl SHA256Hash {
 
 #[cfg(feature = "sha-256")]
 impl Hash for SHA256Hash {
-    fn hash_function(&self) -> &dyn HashFunction {
+    fn hash_function(&self) -> &'static dyn HashFunction {
         &SHA256
     }
-    fn to_hash_bytes<'s: 'h, 'h>(&'s self) -> crate::HashBytes<'h> {
+    /// This will not allocate.
+    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> crate::PreferredHashFormat<'h> {
         crate::HashBytes {
             named_hash_function: self.hash_function().named_hash_function(),
             hash_byte_v: std::borrow::Cow::Borrowed(self.as_slice()),
         }
+        .into()
     }
 }

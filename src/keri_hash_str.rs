@@ -1,6 +1,9 @@
 use std::borrow::Cow;
 
-use crate::{base64_decode_256_bits, base64_decode_512_bits, Hash, HashBytes, NamedHashFunction};
+use crate::{
+    base64_decode_256_bits, base64_decode_512_bits, Hash, HashBytes, NamedHashFunction,
+    PreferredHashFormat,
+};
 
 /// This is the str-based analog to KERIHash.
 #[derive(Debug, Eq, Hash, PartialEq, pneutype::PneuStr)]
@@ -43,7 +46,7 @@ impl KERIHashStr {
             }
         }
     }
-    pub fn to_hash_bytes(&self) -> HashBytes {
+    pub fn to_hash_bytes<'h>(&self) -> HashBytes<'h> {
         match self.len() {
             44 => {
                 // NOTE: This assumes that 44 chars imply a 1-char prefix and a 43-char base64 string.
@@ -80,8 +83,9 @@ impl KERIHashStr {
     }
 }
 
-impl Hash for KERIHashStr {
-    fn hash_function(&self) -> &dyn crate::HashFunction {
+impl<'a> Hash for &'a KERIHashStr {
+    fn hash_function(&self) -> &'static dyn crate::HashFunction {
+        // TODO: De-duplicate this
         match self.keri_prefix() {
             "E" => &crate::Blake3,
             "I" => &crate::SHA256,
@@ -91,19 +95,8 @@ impl Hash for KERIHashStr {
             }
         }
     }
-    fn equals(&self, other: &dyn Hash) -> bool {
-        // Check the hash function directly before resorting to converting to KERIHash.
-        if !self.hash_function().equals(other.hash_function()) {
-            return false;
-        }
-        let other_keri_hash = other.to_keri_hash();
-        self == other_keri_hash.as_ref()
-    }
-    fn to_hash_bytes<'s: 'h, 'h>(&'s self) -> HashBytes<'h> {
-        self.to_hash_bytes()
-    }
-    fn to_keri_hash<'s: 'h, 'h>(&'s self) -> std::borrow::Cow<'h, KERIHashStr> {
-        std::borrow::Cow::Borrowed(self)
+    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> PreferredHashFormat<'h> {
+        std::borrow::Cow::Borrowed(*self).into()
     }
 }
 

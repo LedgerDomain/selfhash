@@ -1,5 +1,4 @@
-use crate::{Hash, HashBytes, KERIHashStr};
-use std::ops::Deref;
+use crate::{Hash, KERIHashStr, PreferredHashFormat};
 
 /// This is a concise, ASCII-only representation of a hash value, which comes from the KERI spec.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, pneutype::PneuString)]
@@ -9,16 +8,18 @@ use std::ops::Deref;
 pub struct KERIHash(String);
 
 impl Hash for KERIHash {
-    fn hash_function(&self) -> &dyn crate::HashFunction {
-        self.deref().hash_function()
+    fn hash_function(&self) -> &'static dyn crate::HashFunction {
+        // TODO: De-duplicate this
+        match self.keri_prefix() {
+            "E" => &crate::Blake3,
+            "I" => &crate::SHA256,
+            "0G" => &crate::SHA512,
+            _ => {
+                panic!("this should not be possible because of check in from_str");
+            }
+        }
     }
-    fn equals(&self, other: &dyn Hash) -> bool {
-        self.deref().equals(other)
-    }
-    fn to_hash_bytes<'s: 'h, 'h>(&'s self) -> HashBytes<'h> {
-        self.deref().to_hash_bytes()
-    }
-    fn to_keri_hash<'s: 'h, 'h>(&'s self) -> std::borrow::Cow<'h, KERIHashStr> {
-        std::borrow::Cow::Borrowed(self.as_keri_hash_str())
+    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> PreferredHashFormat<'h> {
+        std::borrow::Cow::Borrowed(self.as_keri_hash_str()).into()
     }
 }

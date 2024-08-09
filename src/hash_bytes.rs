@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{Hash, HashFunction, KERIHash, NamedHashFunction};
+use crate::{Hash, HashFunction, KERIHash, NamedHashFunction, PreferredHashFormat};
 
 /// This is meant to be used in end-use data structures that are self-hashing.
 // TODO: Make elements private and then ensure constructors always render valid data, so that
@@ -80,10 +80,22 @@ impl std::ops::Deref for HashBytes<'_> {
 }
 
 impl Hash for HashBytes<'_> {
-    fn hash_function(&self) -> &dyn HashFunction {
-        &self.named_hash_function
+    fn hash_function(&self) -> &'static dyn HashFunction {
+        self.named_hash_function.as_hash_function()
     }
+    /// This will not allocate.
+    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> PreferredHashFormat<'h> {
+        HashBytes::<'h> {
+            named_hash_function: self.named_hash_function.clone(),
+            hash_byte_v: Cow::Borrowed(&self.hash_byte_v),
+        }
+        .into()
+    }
+    /// This will not allocate.
     fn to_hash_bytes<'s: 'h, 'h>(&'s self) -> HashBytes<'h> {
-        self.clone()
+        HashBytes::<'h> {
+            named_hash_function: self.named_hash_function.clone(),
+            hash_byte_v: Cow::Borrowed(&self.hash_byte_v),
+        }
     }
 }

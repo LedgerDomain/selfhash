@@ -1,4 +1,5 @@
 use crate::{Hash, HashFunction, Hasher, NamedHashFunction};
+use std::borrow::Cow;
 
 /// This represents the BLAKE3 hash function itself, which in particular has 256 bit output.  Note that
 /// this is distinct from blake3::Hasher (which is the thing that produces the digest) or a blake3::Hash
@@ -58,13 +59,14 @@ impl Hasher for blake3::Hasher {
 
 #[cfg(feature = "blake3")]
 impl Hash for blake3::Hash {
-    fn hash_function(&self) -> &dyn HashFunction {
+    fn hash_function(&self) -> &'static dyn HashFunction {
         &Blake3
     }
-    fn to_hash_bytes<'s: 'h, 'h>(&'s self) -> crate::HashBytes<'h> {
+    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> crate::PreferredHashFormat<'h> {
         crate::HashBytes {
             named_hash_function: self.hash_function().named_hash_function(),
-            hash_byte_v: std::borrow::Cow::Borrowed(self.as_bytes().as_slice()),
+            hash_byte_v: Cow::Borrowed(self.as_bytes().as_slice()),
         }
+        .into()
     }
 }
