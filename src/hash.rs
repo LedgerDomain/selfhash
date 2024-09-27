@@ -7,9 +7,9 @@ use std::borrow::Cow;
 pub trait Hash {
     /// Returns the HashFunction corresponding to this hash value.
     fn hash_function(&self) -> &'static dyn HashFunction;
-    /// Returns true iff self represents the same hash value as other.  Default impl checks if
-    /// self.hash_function() equals other.hash_function().  If so, then checks if self.to_hash_bytes()
-    /// equals other.to_hash_bytes() (as a common type for comparison).
+    /// Returns true iff self represents the same Hash value as other.  Default impl checks if
+    /// self.hash_function() equals other.hash_function().  If so, then compares the preferred
+    /// hash format values of each, avoiding allocation if possible.
     fn equals(&self, other: &dyn Hash) -> bool {
         // Check the hash function directly before resorting to converting.
         if !self.hash_function().equals(other.hash_function()) {

@@ -1,3 +1,5 @@
+use selfhash::{require, Error};
+
 #[test]
 fn test_serialize_deserialize_keri_hash() {
     let keri_hash =
@@ -376,12 +378,10 @@ impl std::fmt::Display for URIWithHash {
 }
 
 impl std::str::FromStr for URIWithHash {
-    type Err = &'static str;
+    type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // TODO: Need to check for proper percent-encoding, etc.
-        if !s.is_ascii() {
-            return Err("URIWithSignature must be ASCII");
-        }
+        require!(s.is_ascii(), "URIWithSignature must be ASCII");
         // Parse the scheme.
         let (scheme, after_scheme) = s
             .split_once(":")

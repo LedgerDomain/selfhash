@@ -1,4 +1,4 @@
-use crate::{Blake3, Hash, HashFunction, Hasher, SHA256, SHA512};
+use crate::{bail, Blake3, Error, Hash, HashFunction, Hasher, Result, SHA256, SHA512};
 
 /// A hash function represented by its official name.
 #[derive(
@@ -22,12 +22,12 @@ impl NamedHashFunction {
     /// See https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
     pub const SHA_512: NamedHashFunction = NamedHashFunction(SHA_512_STR);
 
-    pub fn try_from_keri_prefix(keri_prefix: &str) -> Result<Self, &'static str> {
+    pub fn try_from_keri_prefix(keri_prefix: &str) -> Result<Self> {
         match keri_prefix {
             "E" => Ok(Self::BLAKE3),
             "I" => Ok(Self::SHA_256),
             "0G" => Ok(Self::SHA_512),
-            _ => Err("unrecognized keri_prefix"),
+            _ => bail!("unrecognized keri_prefix {:?}", keri_prefix),
         }
     }
     pub fn as_hash_function(&self) -> &'static dyn HashFunction {
@@ -53,13 +53,13 @@ impl NamedHashFunction {
 }
 
 impl std::str::FromStr for NamedHashFunction {
-    type Err = &'static str;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    type Err = Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             BLAKE3_STR => Ok(NamedHashFunction::BLAKE3),
             SHA_256_STR => Ok(NamedHashFunction::SHA_256),
             SHA_512_STR => Ok(NamedHashFunction::SHA_512),
-            _ => Err("unrecognized hash function name"),
+            _ => bail!("unrecognized hash function name {:?}", s),
         }
     }
 }

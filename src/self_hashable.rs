@@ -1,4 +1,4 @@
-use crate::{Hash, Hasher};
+use crate::{bail, require, Error, Hash, Hasher, Result};
 
 /// This is the canonical implementation of the SelfHashable::write_digest_data
 /// method for when the SelfHashable type implements Clone and the desired desired serialization
@@ -28,6 +28,7 @@ pub fn write_digest_data_using_jcs<S: Clone + SelfHashable + serde::Serialize>(
 /// An easy default for the implementation of write_digest_data is provided by the write_digest_data_using_jcs
 /// function, which can be called from your implementation of write_digest_data if your type implements
 /// Clone and serde::Serialize and the desired serialization format is JSON Canonicalization Scheme (JCS).
+// TODO: Consider breaking out the `&mut self` methods into a separate trait called SelfHashableMut.
 pub trait SelfHashable {
     /// This should feed the content of this object into the hasher in the order that it should be hashed,
     /// writing placeholders for the self-hash slots.
@@ -44,7 +45,7 @@ pub trait SelfHashable {
     fn set_self_hash_slots_to(&mut self, hash: &dyn Hash);
     /// Checks that all the self-hash slots are equal, returning error if they aren't.  Otherwise returns
     /// Some(self_hash) if they are set, and None if they are not set.
-    fn get_unverified_self_hash(&self) -> Result<Option<&dyn Hash>, &'static str> {
+    fn get_unverified_self_hash(&self) -> Result<Option<&dyn Hash>> {
         let total_self_hash_count = self.self_hash_oi().count();
         // First, ensure that the self-hash slots are either all Some(_) or all None.
         match self
@@ -68,34 +69,32 @@ pub trait SelfHashable {
                 // All self-hash slots are populated, so we have to check them.
             }
             Some(_) => {
-                return Err("This object is a malformed as SelfHashing because some but not all self-hash slots are populated -- it must be all or nothing.");
+                bail!("This object is a malformed as SelfHashing because some but not all self-hash slots are populated -- it must be all or nothing.");
             }
             None => {
-                return Err("This object has no self-hash slots, and therefore can't be self-hashed or self-verified.");
+                bail!("This object has no self-hash slots, and therefore can't be self-hashed or self-verified.");
             }
         }
 
         let first_self_hash = self.self_hash_oi().nth(0).unwrap().unwrap();
         // Now ensure all self-hash slots are equal.
         for self_hash in self.self_hash_oi().map(|self_hash_o| self_hash_o.unwrap()) {
-            if !self_hash.equals(first_self_hash) {
-                return Err("Object's self-hash slots do not all match.");
-            }
+            require!(
+                self_hash.equals(first_self_hash),
+                "Object's self-hash slots do not all match."
+            );
         }
         // If it got this far, it's valid.
         Ok(Some(first_self_hash))
     }
     /// Computes the self-hash for this object.  Note that this ignores any existing values in
     /// the self-hash slots, using the appropriate placeholder for those values instead.
-    fn compute_self_hash(
-        &self,
-        mut hasher_b: Box<dyn Hasher>,
-    ) -> Result<Box<dyn Hash>, &'static str> {
+    fn compute_self_hash(&self, mut hasher_b: Box<dyn Hasher>) -> Result<Box<dyn Hash>> {
         self.write_digest_data(hasher_b.as_mut());
         Ok(hasher_b.finalize())
     }
     /// Computes the self-hash and writes it into all the self-hash slots.
-    fn self_hash(&mut self, hasher_b: Box<dyn Hasher>) -> Result<&dyn Hash, &'static str> {
+    fn self_hash(&mut self, hasher_b: Box<dyn Hasher>) -> Result<&dyn Hash> {
         let self_hash = self.compute_self_hash(hasher_b)?;
         self.set_self_hash_slots_to(self_hash.as_ref());
         debug_assert!(self.self_hash_oi().all(|hash_o| -> bool {
@@ -109,9 +108,9 @@ pub trait SelfHashable {
         Ok(first_self_hash)
     }
     /// Verifies the self-hashes in this object and returns a reference to the verified self-hash.
-    fn verify_self_hashes<'a, 'b: 'a>(&'b self) -> Result<&'a dyn Hash, &'static str> {
+    fn verify_self_hashes<'a, 'b: 'a>(&'b self) -> Result<&'a dyn Hash> {
         let unverified_self_hash = self.get_unverified_self_hash()?.ok_or_else(|| {
-            "This object has no self-hash slots, and therefore can't be self-hashed or self-verified."
+            "This object has no self-hash slots, and therefore can't be self-verified."
         })?;
         // Now compute the digest which will be used either as the direct hash value, or as the input
         // to the signature algorithm.
@@ -120,7 +119,8 @@ pub trait SelfHashable {
         let computed_self_hash = self.compute_self_hash(hasher_b)?;
         if !computed_self_hash.equals(unverified_self_hash) {
             return Err(
-                "This object's computed self-hash does not match the object's claimed self-hash.",
+                Error::from(format!("This object's computed self-hash ({}) does not match the object's claimed self-hash ({}).",
+                computed_self_hash.to_keri_hash(), unverified_self_hash.to_keri_hash()))
             );
         }
         // If it got this far, it's valid.

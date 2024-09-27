@@ -1,6 +1,7 @@
+use crate::{
+    require, Hash, HashFunction, KERIHash, NamedHashFunction, PreferredHashFormat, Result,
+};
 use std::borrow::Cow;
-
-use crate::{Hash, HashFunction, KERIHash, NamedHashFunction, PreferredHashFormat};
 
 /// This is meant to be used in end-use data structures that are self-hashing.
 // TODO: Make elements private and then ensure constructors always render valid data, so that
@@ -26,12 +27,8 @@ impl<'a> HashBytes<'a> {
             hash_byte_v: Cow::Owned(self.hash_byte_v.to_vec()),
         }
     }
-    pub fn to_keri_hash(&self) -> Result<KERIHash, &'static str> {
-        if self.hash_byte_v.len() != self.named_hash_function.placeholder_bytes().len() {
-            return Err(
-                "hash_byte_v length does not match expected placeholder bytes length of the NamedHashFunction",
-            );
-        }
+    pub fn to_keri_hash(&self) -> Result<KERIHash> {
+        require!(self.hash_byte_v.len() == self.named_hash_function.placeholder_bytes().len(), "hash_byte_v length ({}) does not match expected placeholder bytes length ({}) of the NamedHashFunction", self.hash_byte_v.len(), self.named_hash_function.placeholder_bytes().len());
         let keri_hash_string = match self.named_hash_function.placeholder_bytes().len() {
             32 => {
                 let mut buffer = [0u8; 43];

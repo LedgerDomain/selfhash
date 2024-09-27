@@ -1,9 +1,8 @@
-use std::borrow::Cow;
-
 use crate::{
-    base64_decode_256_bits, base64_decode_512_bits, Hash, HashBytes, NamedHashFunction,
-    PreferredHashFormat,
+    bail, base64_decode_256_bits, base64_decode_512_bits, require, Error, Hash, HashBytes,
+    HashFunction, NamedHashFunction, PreferredHashFormat,
 };
+use std::borrow::Cow;
 
 /// This is the str-based analog to KERIHash.
 #[derive(Debug, Eq, Hash, PartialEq, pneutype::PneuStr)]
@@ -84,7 +83,7 @@ impl KERIHashStr {
 }
 
 impl<'a> Hash for &'a KERIHashStr {
-    fn hash_function(&self) -> &'static dyn crate::HashFunction {
+    fn hash_function(&self) -> &'static dyn HashFunction {
         // TODO: De-duplicate this
         match self.keri_prefix() {
             "E" => &crate::Blake3,
@@ -102,14 +101,13 @@ impl<'a> Hash for &'a KERIHashStr {
 
 impl pneutype::Validate for KERIHashStr {
     type Data = str;
-    type Error = &'static str;
+    type Error = Error;
     fn validate(s: &Self::Data) -> Result<(), Self::Error> {
-        if s.len() < 1 {
-            return Err("string too short to be a KERIHash");
-        }
-        if !s.is_ascii() {
-            return Err("KERIHash strings must contain only ASCII chars");
-        }
+        require!(s.len() >= 1, "string too short to be a KERIHash");
+        require!(
+            s.is_ascii(),
+            "KERIHash strings must contain only ASCII chars"
+        );
         match s.len() {
             44 => {
                 // NOTE: This assumes that 44 chars imply a 1-char prefix and a 43-char base64 string.
@@ -132,7 +130,10 @@ impl pneutype::Validate for KERIHashStr {
                 base64_decode_512_bits(data, &mut buffer)?;
             }
             _ => {
-                return Err("string was not a valid length for a KERIHash");
+                bail!(
+                    "string was not a valid length for a KERIHash (length was {})",
+                    s.len()
+                );
             }
         }
         Ok(())
