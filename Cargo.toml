@@ -58,3 +58,6 @@ serial_test = "2.0.0"
 
 [patch.crates-io]
 pneutype = { git = "https://github.com/vdods/pneutype", rev = "pneutype-v0.5.1" }
+
+[workspace]
+members = [".", "selfhash-bin"]
