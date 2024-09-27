@@ -514,3 +514,46 @@ fn test_multiple_self_hash_slots() {
         fancy_data.verify_self_hashes().expect("pass");
     }
 }
+
+#[cfg(feature = "self-hashable-json")]
+#[test]
+fn test_self_hashable_json_0() {
+    use selfhash::{HashFunction, SelfHashable};
+    {
+        let mut json = serde_json::from_str::<serde_json::Value>(r#"{"thing":3}"#).expect("pass");
+        println!("json before self-hashing: {}", json.to_string());
+        json.self_hash(selfhash::Blake3.new_hasher()).expect("pass");
+        println!("json after self-hashing: {}", json.to_string());
+        json.verify_self_hashes().expect("pass");
+    }
+}
+
+#[cfg(feature = "self-hashable-json")]
+#[test]
+fn test_self_hashable_json_1() {
+    use selfhash::{HashFunction, SelfHashable, SelfHashableJSON};
+    use std::{borrow::Cow, collections::HashSet};
+    {
+        println!("with self-hash field name override:");
+        let value =
+            serde_json::from_str::<serde_json::Value>(r#"{"thing":3, "$id":"selfhash:///"}"#)
+                .expect("pass");
+        println!("json before self-hashing: {}", value.to_string());
+        let self_hash_field_name_s = HashSet::new();
+        let self_hash_url_field_name_s = maplit::hashset! { Cow::Borrowed("$id") };
+        let mut self_hashable_json = SelfHashableJSON::new(
+            value,
+            Cow::Owned(self_hash_field_name_s),
+            Cow::Owned(self_hash_url_field_name_s),
+        )
+        .expect("pass");
+        self_hashable_json
+            .self_hash(selfhash::Blake3.new_hasher())
+            .expect("pass");
+        self_hashable_json.verify_self_hashes().expect("pass");
+        println!(
+            "json after self-hashing: {}",
+            self_hashable_json.value().to_string()
+        );
+    }
+}
