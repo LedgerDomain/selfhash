@@ -1,6 +1,6 @@
 # selfhash-bin
 
-CLI tool for generating and verifying self-hashed JSON.  By default, the self-hash slot is considered to be the top-level "selfHash" field.  This (as well as self-hash URL fields) can be configured using the `--
+CLI tool for generating and verifying self-hashed JSON.
 
 ## Installation
 
