@@ -5,6 +5,12 @@ use std::{
     io::{Read, Write},
 };
 
+/// Operate on JSON as self-hashable data -- data which is self-validating.  In particular, self-hashable data is
+/// data which has at least one "self-hash slot" which is used during the computation and verification of the
+/// data's self-hash.  During the computation of the data's self-hash, all the self-hash slots are set to a
+/// placeholder value which encodes which hash function will be used, the data is serialized into JCS (JSON
+/// Canonicalization Scheme), and then hashed.  This hash value is then used to set all the self-hash slots.
+/// The data is then serialized into JCS again, and at this point is self-hashed and fully self-verifiable.
 #[derive(clap::Parser)]
 #[clap(version, about)]
 enum CLI {

@@ -1,4 +1,4 @@
-use crate::{bail, require, Error, Hash, Hasher, Result};
+use crate::{bail, error, require, Error, Hash, Hasher, Result};
 
 /// This is the canonical implementation of the SelfHashable::write_digest_data
 /// method for when the SelfHashable type implements Clone and the desired desired serialization
@@ -104,7 +104,13 @@ pub trait SelfHashable {
                 false
             }
         }), "programmer error: implementation of set_self_hash_slots_to did not set all self-hash slots.");
-        let first_self_hash = self.self_hash_oi().nth(0).unwrap().unwrap();
+        let first_self_hash = self
+            .self_hash_oi()
+            .nth(0)
+            .ok_or_else(|| {
+                error!("This object has no self-hash slots, and therefore can't be self-hashed.")
+            })?
+            .unwrap();
         Ok(first_self_hash)
     }
     /// Verifies the self-hashes in this object and returns a reference to the verified self-hash.

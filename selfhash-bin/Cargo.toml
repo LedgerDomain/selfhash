@@ -1,6 +1,6 @@
 [package]
 name = "selfhash-bin"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Victor Dods <victor.dods@gmail.com>"]
 edition = "2021"
 
