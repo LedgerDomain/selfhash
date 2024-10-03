@@ -1,4 +1,4 @@
-use crate::{Hash, KERIHashStr, PreferredHashFormat, SelfHashURLStr};
+use crate::{Hash, KERIHashStr, PreferredHashFormat, Result, SelfHashURLStr};
 use pneutype::Validate;
 
 /// EXPERIMENTAL: Represents a URL that has the form "selfhash:///<keri-hash>"
@@ -23,10 +23,10 @@ impl SelfHashURL {
 }
 
 impl Hash for SelfHashURL {
-    fn hash_function(&self) -> &'static dyn crate::HashFunction {
+    fn hash_function(&self) -> Result<&'static dyn crate::HashFunction> {
         self.keri_hash_o().unwrap().hash_function()
     }
-    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> PreferredHashFormat<'h> {
-        std::borrow::Cow::Borrowed(self.keri_hash_o().unwrap()).into()
+    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> Result<PreferredHashFormat<'h>> {
+        Ok(std::borrow::Cow::Borrowed(self.keri_hash_o().unwrap()).into())
     }
 }

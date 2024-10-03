@@ -14,11 +14,10 @@ use std::{
 #[derive(clap::Parser)]
 #[clap(version, about)]
 enum CLI {
-    /// Read JSON from stdin, compute its self-hash, and output canonical JSON (JCS) with its self-hash [URL]
-    /// field(s) set (see --self-hash-field-name and --self-hash-url-field-name), overwriting any existing
-    /// self-hash [URL] field(s).
+    /// Read JSON from stdin, compute its self-hash, and output canonical JSON (JCS) with its self-hash [URL] path(s)
+    /// set (see --self-hash-paths and --self-hash-url-paths), overwriting any existing self-hash [URL] path(s).
     Compute(Compute),
-    /// Read JSON from stdin, verify its self-hash(es) (see --self-hash-field-name and --self-hash-url-field-name),
+    /// Read JSON from stdin, verify its self-hash(es) (see --self-hash-paths and --self-hash-url-paths),
     /// and print the verified self-hash.
     Verify(Verify),
 }
@@ -34,32 +33,39 @@ impl CLI {
 
 #[derive(clap::Args)]
 struct SelfHashArgs {
-    /// Optionally specify a comma-delimited list of top-level field names that are considered self-hash slots.
-    #[arg(short, long, default_value = "selfHash", value_name = "FIELD_NAME")]
-    self_hash_field_names: String,
-    /// Optionally specify a comma-delimited list of top-level field names that are considered self-hash URL slots.
-    #[arg(short = 'u', long, default_value = "", value_name = "FIELD_NAME")]
-    self_hash_url_field_names: String,
+    /// Optionally specify a comma-delimited list of JSONPath queries that are considered self-hash slots.
+    /// Note that while each self-hash field (i.e. self-hash path query result) doesn't have to exist already,
+    /// its parent must exist.  Each self-hash path must end with a plain field name (not a wildcard and not
+    /// a bracket-enclosed field name).  See https://en.wikipedia.org/wiki/JSONPath for details on JSONPath.
+    #[arg(short, long, default_value = "$.selfHash", value_name = "PATHS")]
+    self_hash_paths: String,
+    /// Optionally specify a comma-delimited list of JSONPath queries that are considered self-hash URL slots.
+    /// Note that each self-hash URL field (i.e. self-hash URL path query result) must already exist and be a
+    /// valid self-hash URL (a valid default is "selfhash:///").  Each self-hash URL path must end with a
+    /// plain field name (not a wildcard and not a bracket-enclosed field name).  See
+    /// https://en.wikipedia.org/wiki/JSONPath for details on JSONPath.
+    #[arg(short = 'u', long, default_value = "", value_name = "PATHS")]
+    self_hash_url_paths: String,
 }
 
 impl SelfHashArgs {
-    fn parse_self_hash_field_names(&self) -> HashSet<Cow<'_, str>> {
-        let self_hash_field_names = self.self_hash_field_names.trim();
-        if self_hash_field_names.is_empty() {
+    fn parse_self_hash_paths(&self) -> HashSet<Cow<'_, str>> {
+        let self_hash_paths = self.self_hash_paths.trim();
+        if self_hash_paths.is_empty() {
             maplit::hashset! {}
         } else {
-            self_hash_field_names
+            self_hash_paths
                 .split(',')
                 .map(|s| Cow::Borrowed(s))
                 .collect::<HashSet<_>>()
         }
     }
-    fn parse_self_hash_url_field_names(&self) -> HashSet<Cow<'_, str>> {
-        let self_hash_url_field_names = self.self_hash_url_field_names.trim();
-        if self_hash_url_field_names.is_empty() {
+    fn parse_self_hash_url_paths(&self) -> HashSet<Cow<'_, str>> {
+        let self_hash_url_paths = self.self_hash_url_paths.trim();
+        if self_hash_url_paths.is_empty() {
             maplit::hashset! {}
         } else {
-            self_hash_url_field_names
+            self_hash_url_paths
                 .split(',')
                 .map(|s| Cow::Borrowed(s))
                 .collect::<HashSet<_>>()
@@ -84,14 +90,14 @@ impl Compute {
         let value = serde_json::from_str(&input).unwrap();
 
         // Parse the self-hash related arguments.
-        let self_hash_field_name_s = self.self_hash_args.parse_self_hash_field_names();
-        let self_hash_url_field_name_s = self.self_hash_args.parse_self_hash_url_field_names();
+        let self_hash_path_s = self.self_hash_args.parse_self_hash_paths();
+        let self_hash_url_path_s = self.self_hash_args.parse_self_hash_url_paths();
 
         // Set up the context for self-hashable JSON.
         let mut json = SelfHashableJSON::new(
             value,
-            Cow::Borrowed(&self_hash_field_name_s),
-            Cow::Borrowed(&self_hash_url_field_name_s),
+            Cow::Borrowed(&self_hash_path_s),
+            Cow::Borrowed(&self_hash_url_path_s),
         )
         .unwrap();
 
@@ -129,32 +135,30 @@ impl Verify {
         let value: serde_json::Value = serde_json::from_str(&input).unwrap();
 
         // Parse the self-hash related arguments.
-        let self_hash_field_name_s = self.self_hash_args.parse_self_hash_field_names();
-        let self_hash_url_field_name_s = self.self_hash_args.parse_self_hash_url_field_names();
+        let self_hash_path_s = self.self_hash_args.parse_self_hash_paths();
+        let self_hash_url_path_s = self.self_hash_args.parse_self_hash_url_paths();
 
-        // Check for the existence of the self-hash [URL] field(s).  This is to produce a better error
-        // message than the one that would be produced by verify_self_hashes.
-        for self_hash_field_name in self_hash_field_name_s.iter().map(std::ops::Deref::deref) {
-            if value.get(self_hash_field_name).is_none() {
-                eprintln!("Input JSON has no {:?} field (expected because of argument --self-hash-field-names {:?}), and therefore can't be verified.", self_hash_field_name, self.self_hash_args.self_hash_field_names);
-                std::process::exit(1);
-            }
-        }
-        for self_hash_url_field_name in self_hash_url_field_name_s
-            .iter()
-            .map(std::ops::Deref::deref)
-        {
-            if value.get(self_hash_url_field_name).is_none() {
-                eprintln!("Input JSON has no {:?} field (expected because of argument --self-hash-url-field-names {:?}), and therefore can't be verified.", self_hash_url_field_name, self.self_hash_args.self_hash_url_field_names);
-                std::process::exit(1);
-            }
-        }
+        // TODO: Add this check
+        // // Check for the existence of the self-hash [URL] path(s).  This is to produce a better error
+        // // message than the one that would be produced by verify_self_hashes.
+        // for self_hash_path in self_hash_path_s.iter().map(std::ops::Deref::deref) {
+        //     if value.get(self_hash_path).is_none() {
+        //         eprintln!("Input JSON has no {:?} field (expected because of argument --self-hash-field-names {:?}), and therefore can't be verified.", self_hash_path, self.self_hash_args.self_hash_paths);
+        //         std::process::exit(1);
+        //     }
+        // }
+        // for self_hash_url_path in self_hash_url_path_s.iter().map(std::ops::Deref::deref) {
+        //     if value.get(self_hash_url_path).is_none() {
+        //         eprintln!("Input JSON has no {:?} field (expected because of argument --self-hash-url-field-names {:?}), and therefore can't be verified.", self_hash_url_path, self.self_hash_args.self_hash_url_paths);
+        //         std::process::exit(1);
+        //     }
+        // }
 
         // Set up the context for self-hashable JSON.
         let json = SelfHashableJSON::new(
             value,
-            Cow::Borrowed(&self_hash_field_name_s),
-            Cow::Borrowed(&self_hash_url_field_name_s),
+            Cow::Borrowed(&self_hash_path_s),
+            Cow::Borrowed(&self_hash_url_path_s),
         )
         .unwrap();
 
@@ -162,7 +166,8 @@ impl Verify {
         let self_hash = json
             .verify_self_hashes()
             .expect("self-hash verification failed")
-            .to_keri_hash();
+            .to_keri_hash()
+            .unwrap();
 
         // Print the verified self-hash with optional newline.
         std::io::stdout().write(self_hash.as_bytes()).unwrap();

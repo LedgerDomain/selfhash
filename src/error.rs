@@ -16,6 +16,20 @@ impl std::ops::Deref for Error {
     }
 }
 
+#[cfg(feature = "self-hashable-json")]
+impl From<jsonpath_lib::JsonPathError> for Error {
+    fn from(e: jsonpath_lib::JsonPathError) -> Self {
+        Self(Cow::Owned(e.to_string()))
+    }
+}
+
+#[cfg(feature = "self-hashable-json")]
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Self(Cow::Owned(e.to_string()))
+    }
+}
+
 impl From<&'static str> for Error {
     fn from(s: &'static str) -> Self {
         Self(Cow::Borrowed(s))

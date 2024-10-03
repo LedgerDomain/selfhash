@@ -77,22 +77,22 @@ impl std::ops::Deref for HashBytes<'_> {
 }
 
 impl Hash for HashBytes<'_> {
-    fn hash_function(&self) -> &'static dyn HashFunction {
-        self.named_hash_function.as_hash_function()
+    fn hash_function(&self) -> Result<&'static dyn HashFunction> {
+        Ok(self.named_hash_function.as_hash_function())
     }
     /// This will not allocate.
-    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> PreferredHashFormat<'h> {
-        HashBytes::<'h> {
+    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> Result<PreferredHashFormat<'h>> {
+        Ok(HashBytes::<'h> {
             named_hash_function: self.named_hash_function.clone(),
             hash_byte_v: Cow::Borrowed(&self.hash_byte_v),
         }
-        .into()
+        .into())
     }
     /// This will not allocate.
-    fn to_hash_bytes<'s: 'h, 'h>(&'s self) -> HashBytes<'h> {
-        HashBytes::<'h> {
+    fn to_hash_bytes<'s: 'h, 'h>(&'s self) -> Result<HashBytes<'h>> {
+        Ok(HashBytes::<'h> {
             named_hash_function: self.named_hash_function.clone(),
             hash_byte_v: Cow::Borrowed(&self.hash_byte_v),
-        }
+        })
     }
 }

@@ -58,14 +58,16 @@ impl Hasher for blake3::Hasher {
 
 #[cfg(feature = "blake3")]
 impl Hash for blake3::Hash {
-    fn hash_function(&self) -> &'static dyn HashFunction {
-        &Blake3
+    fn hash_function(&self) -> crate::Result<&'static dyn HashFunction> {
+        Ok(&Blake3)
     }
-    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> crate::PreferredHashFormat<'h> {
-        crate::HashBytes {
-            named_hash_function: self.hash_function().named_hash_function(),
+    fn as_preferred_hash_format<'s: 'h, 'h>(
+        &'s self,
+    ) -> crate::Result<crate::PreferredHashFormat<'h>> {
+        Ok(crate::HashBytes {
+            named_hash_function: self.hash_function()?.named_hash_function(),
             hash_byte_v: std::borrow::Cow::Borrowed(self.as_bytes().as_slice()),
         }
-        .into()
+        .into())
     }
 }

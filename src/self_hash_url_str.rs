@@ -1,4 +1,4 @@
-use crate::{require, Error, Hash, HashFunction, KERIHashStr, PreferredHashFormat};
+use crate::{require, Error, Hash, HashFunction, KERIHashStr, PreferredHashFormat, Result};
 
 /// This is the str-based analog to SelfHashURL.
 #[derive(Debug, Eq, Hash, PartialEq, pneutype::PneuStr)]
@@ -21,11 +21,11 @@ impl SelfHashURLStr {
 }
 
 impl<'a> Hash for &'a SelfHashURLStr {
-    fn hash_function(&self) -> &'static dyn HashFunction {
+    fn hash_function(&self) -> Result<&'static dyn HashFunction> {
         self.keri_hash_o().unwrap().hash_function()
     }
-    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> PreferredHashFormat<'h> {
-        std::borrow::Cow::Borrowed(self.keri_hash_o().unwrap()).into()
+    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> Result<PreferredHashFormat<'h>> {
+        Ok(std::borrow::Cow::Borrowed(self.keri_hash_o().unwrap()).into())
     }
 }
 

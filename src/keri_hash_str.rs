@@ -1,6 +1,6 @@
 use crate::{
     bail, base64_decode_256_bits, base64_decode_512_bits, require, Error, Hash, HashBytes,
-    HashFunction, NamedHashFunction, PreferredHashFormat,
+    HashFunction, NamedHashFunction, PreferredHashFormat, Result,
 };
 use std::borrow::Cow;
 
@@ -83,26 +83,26 @@ impl KERIHashStr {
 }
 
 impl<'a> Hash for &'a KERIHashStr {
-    fn hash_function(&self) -> &'static dyn HashFunction {
+    fn hash_function(&self) -> Result<&'static dyn HashFunction> {
         // TODO: De-duplicate this
         match self.keri_prefix() {
-            "E" => &crate::Blake3,
-            "I" => &crate::SHA256,
-            "0G" => &crate::SHA512,
+            "E" => Ok(&crate::Blake3),
+            "I" => Ok(&crate::SHA256),
+            "0G" => Ok(&crate::SHA512),
             _ => {
                 panic!("this should not be possible because of check in from_str");
             }
         }
     }
-    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> PreferredHashFormat<'h> {
-        std::borrow::Cow::Borrowed(*self).into()
+    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> Result<PreferredHashFormat<'h>> {
+        Ok(std::borrow::Cow::Borrowed(*self).into())
     }
 }
 
 impl pneutype::Validate for KERIHashStr {
     type Data = str;
     type Error = Error;
-    fn validate(s: &Self::Data) -> Result<(), Self::Error> {
+    fn validate(s: &Self::Data) -> std::result::Result<(), Self::Error> {
         require!(s.len() >= 1, "string too short to be a KERIHash");
         require!(
             s.is_ascii(),

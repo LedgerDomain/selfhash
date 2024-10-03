@@ -11,7 +11,7 @@ blake3 = ["dep:blake3"]
 # SelfHashable implements Clone and the desired serialization format is JSON Canonicalization Scheme (JCS).
 jcs = ["dep:serde", "dep:serde_json_canonicalizer"]
 # This enables support for self-hashable serde_json::Value-s.
-self-hashable-json = ["jcs", "dep:serde_json"]
+self-hashable-json = ["jcs", "dep:jsonpath_lib", "dep:serde_json"]
 # This enables serde support for for KERIHash and NamedHashFunction types.
 serde = ["dep:serde", "dep:serde_with"]
 # This enables support for the SHA-256 hash function via the sha2 crate.
@@ -31,6 +31,7 @@ derive_more = { version = "0.99.17", default-features = false, features = [
     "into",
 ] }
 digest = { version = "0.10.7", optional = true }
+jsonpath_lib = { version = "0.3.0", optional = true }
 lazy_static = { version = "1.4", optional = true, default-features = false }
 pneutype = "0.5.1"
 serde = { version = "1.0", optional = true, default-features = false, features = [

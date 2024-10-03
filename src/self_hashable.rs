@@ -8,14 +8,15 @@ use crate::{bail, error, require, Error, Hash, Hasher, Result};
 pub fn write_digest_data_using_jcs<S: Clone + SelfHashable + serde::Serialize>(
     self_hashable: &S,
     mut hasher: &mut dyn Hasher,
-) {
+) -> Result<()> {
     let mut c = self_hashable.clone();
-    c.set_self_hash_slots_to(hasher.hash_function().placeholder_hash());
+    c.set_self_hash_slots_to(hasher.hash_function().placeholder_hash())?;
     // Use JCS to produce canonical output.  The `&mut hasher` ridiculousness is because
     // serde_json_canonicalizer::to_writer uses a generic impl of std::io::Write and therefore
     // implicitly requires the `Sized` trait.  Therefore passing in a reference to the reference
     // achieves the desired effect.
-    serde_json_canonicalizer::to_writer(&c, &mut hasher).unwrap();
+    serde_json_canonicalizer::to_writer(&c, &mut hasher)?;
+    Ok(())
 }
 
 /// This trait allows a self-hashing procedure to be defined for a data type.  The data type must implement
@@ -36,20 +37,20 @@ pub trait SelfHashable {
     /// If the implementing type implements Clone and serde::Serialize, and the desired serialization
     /// format is JSON Canonicalization Scheme (JCS), then you can simply call write_digest_data_using_jcs
     /// from your implementation of this method.
-    fn write_digest_data(&self, hasher: &mut dyn Hasher);
+    fn write_digest_data(&self, hasher: &mut dyn Hasher) -> Result<()>;
     /// Returns an iterator over the self-hash slots in this object.
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
-    ) -> Box<dyn std::iter::Iterator<Item = Option<&dyn Hash>> + 'a>;
+    ) -> Result<Box<dyn std::iter::Iterator<Item = Option<&dyn Hash>> + 'a>>;
     /// Sets all self-hash slots in this object (including any nested objects) to the given hash.
-    fn set_self_hash_slots_to(&mut self, hash: &dyn Hash);
+    fn set_self_hash_slots_to(&mut self, hash: &dyn Hash) -> Result<()>;
     /// Checks that all the self-hash slots are equal, returning error if they aren't.  Otherwise returns
     /// Some(self_hash) if they are set, and None if they are not set.
     fn get_unverified_self_hash(&self) -> Result<Option<&dyn Hash>> {
-        let total_self_hash_count = self.self_hash_oi().count();
+        let total_self_hash_count = self.self_hash_oi()?.count();
         // First, ensure that the self-hash slots are either all Some(_) or all None.
         match self
-            .self_hash_oi()
+            .self_hash_oi()?
             .map(|self_hash_o| {
                 if self_hash_o.is_some() {
                     1usize
@@ -76,11 +77,11 @@ pub trait SelfHashable {
             }
         }
 
-        let first_self_hash = self.self_hash_oi().nth(0).unwrap().unwrap();
+        let first_self_hash = self.self_hash_oi()?.nth(0).unwrap().unwrap();
         // Now ensure all self-hash slots are equal.
-        for self_hash in self.self_hash_oi().map(|self_hash_o| self_hash_o.unwrap()) {
+        for self_hash in self.self_hash_oi()?.map(|self_hash_o| self_hash_o.unwrap()) {
             require!(
-                self_hash.equals(first_self_hash),
+                self_hash.equals(first_self_hash)?,
                 "Object's self-hash slots do not all match."
             );
         }
@@ -90,22 +91,22 @@ pub trait SelfHashable {
     /// Computes the self-hash for this object.  Note that this ignores any existing values in
     /// the self-hash slots, using the appropriate placeholder for those values instead.
     fn compute_self_hash(&self, mut hasher_b: Box<dyn Hasher>) -> Result<Box<dyn Hash>> {
-        self.write_digest_data(hasher_b.as_mut());
+        self.write_digest_data(hasher_b.as_mut())?;
         Ok(hasher_b.finalize())
     }
     /// Computes the self-hash and writes it into all the self-hash slots.
     fn self_hash(&mut self, hasher_b: Box<dyn Hasher>) -> Result<&dyn Hash> {
         let self_hash = self.compute_self_hash(hasher_b)?;
-        self.set_self_hash_slots_to(self_hash.as_ref());
-        debug_assert!(self.self_hash_oi().all(|hash_o| -> bool {
-            if let Some(hash) = hash_o.as_ref() {
-                !hash.equals(hash.hash_function().placeholder_hash())
+        self.set_self_hash_slots_to(self_hash.as_ref())?;
+        for self_hash_o in self.self_hash_oi()? {
+            if let Some(self_hash) = self_hash_o {
+                require!(!self_hash.equals(self_hash.hash_function()?.placeholder_hash())?, "programmer error: implementation of set_self_hash_slots_to did not set all self-hash slots.");
             } else {
-                false
+                bail!("programmer error: implementation of set_self_hash_slots_to did not set all self-hash slots (some were left unset).");
             }
-        }), "programmer error: implementation of set_self_hash_slots_to did not set all self-hash slots.");
+        }
         let first_self_hash = self
-            .self_hash_oi()
+            .self_hash_oi()?
             .nth(0)
             .ok_or_else(|| {
                 error!("This object has no self-hash slots, and therefore can't be self-hashed.")
@@ -120,13 +121,13 @@ pub trait SelfHashable {
         })?;
         // Now compute the digest which will be used either as the direct hash value, or as the input
         // to the signature algorithm.
-        let hash_function = unverified_self_hash.hash_function();
+        let hash_function = unverified_self_hash.hash_function()?;
         let hasher_b = hash_function.new_hasher();
         let computed_self_hash = self.compute_self_hash(hasher_b)?;
-        if !computed_self_hash.equals(unverified_self_hash) {
+        if !computed_self_hash.equals(unverified_self_hash)? {
             return Err(
                 Error::from(format!("This object's computed self-hash ({}) does not match the object's claimed self-hash ({}).",
-                computed_self_hash.to_keri_hash(), unverified_self_hash.to_keri_hash()))
+                computed_self_hash.to_keri_hash()?, unverified_self_hash.to_keri_hash()?))
             );
         }
         // If it got this far, it's valid.

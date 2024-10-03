@@ -94,15 +94,15 @@ fn test_hash_roundtrips() {
         let mut hasher = hash_function.new_hasher();
         hasher.update(b"blah blah blah blah hippos");
         let hash_b = hasher.finalize();
-        let keri_hash = hash_b.to_keri_hash();
+        let keri_hash = hash_b.to_keri_hash().expect("pass");
         println!("keri_hash: {}", keri_hash);
         let hash_parsed_b = hash_from_keri_hash(&keri_hash);
-        assert!(hash_parsed_b.equals(hash_b.as_ref()));
+        assert!(hash_parsed_b.equals(hash_b.as_ref()).expect("pass"));
 
         // Round trip to HashBytes as well.
-        let hash_bytes = hash_b.to_hash_bytes();
+        let hash_bytes = hash_b.to_hash_bytes().expect("pass");
         let hash_roundtripped_b = hash_from_hash_bytes(hash_bytes);
-        assert!(hash_roundtripped_b.equals(hash_b.as_ref()));
+        assert!(hash_roundtripped_b.equals(hash_b.as_ref()).expect("pass"));
     }
 }
 
@@ -124,20 +124,22 @@ pub struct SimpleDataHashBytes {
 }
 
 impl selfhash::SelfHashable for SimpleDataHashBytes {
-    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) {
-        selfhash::write_digest_data_using_jcs(self, hasher);
+    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) -> selfhash::Result<()> {
+        selfhash::write_digest_data_using_jcs(self, hasher)
     }
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
-    ) -> Box<dyn std::iter::Iterator<Item = Option<&dyn selfhash::Hash>> + 'a> {
-        Box::new(std::iter::once(
+    ) -> selfhash::Result<Box<dyn std::iter::Iterator<Item = Option<&dyn selfhash::Hash>> + 'a>>
+    {
+        Ok(Box::new(std::iter::once(
             self.self_hash_o
                 .as_ref()
                 .map(|s| -> &dyn selfhash::Hash { s }),
-        ))
+        )))
     }
-    fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) {
-        self.self_hash_o = Some(hash.to_hash_bytes().into_owned());
+    fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) -> selfhash::Result<()> {
+        self.self_hash_o = Some(hash.to_hash_bytes()?.into_owned());
+        Ok(())
     }
 }
 
@@ -239,20 +241,22 @@ pub struct SimpleDataKERIHash {
 }
 
 impl selfhash::SelfHashable for SimpleDataKERIHash {
-    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) {
-        selfhash::write_digest_data_using_jcs(self, hasher);
+    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) -> selfhash::Result<()> {
+        selfhash::write_digest_data_using_jcs(self, hasher)
     }
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
-    ) -> Box<dyn std::iter::Iterator<Item = Option<&dyn selfhash::Hash>> + 'a> {
-        Box::new(std::iter::once(
+    ) -> selfhash::Result<Box<dyn std::iter::Iterator<Item = Option<&dyn selfhash::Hash>> + 'a>>
+    {
+        Ok(Box::new(std::iter::once(
             self.self_hash_o
                 .as_ref()
                 .map(|s| -> &dyn selfhash::Hash { s }),
-        ))
+        )))
     }
-    fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) {
-        self.self_hash_o = Some(hash.to_keri_hash().into_owned());
+    fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) -> selfhash::Result<()> {
+        self.self_hash_o = Some(hash.to_keri_hash()?.into_owned());
+        Ok(())
     }
 }
 
@@ -446,24 +450,26 @@ pub struct FancyData {
 }
 
 impl selfhash::SelfHashable for FancyData {
-    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) {
-        selfhash::write_digest_data_using_jcs(self, hasher);
+    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) -> selfhash::Result<()> {
+        selfhash::write_digest_data_using_jcs(self, hasher)
     }
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
-    ) -> Box<dyn std::iter::Iterator<Item = Option<&dyn selfhash::Hash>> + 'a> {
-        Box::new(
+    ) -> selfhash::Result<Box<dyn std::iter::Iterator<Item = Option<&dyn selfhash::Hash>> + 'a>>
+    {
+        Ok(Box::new(
             std::iter::once(Some(&self.uri.hash as &dyn selfhash::Hash)).chain(std::iter::once(
                 self.self_hash_o
                     .as_ref()
                     .map(|self_hash| self_hash as &dyn selfhash::Hash),
             )),
-        )
+        ))
     }
-    fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) {
-        let keri_hash = hash.to_keri_hash().into_owned();
+    fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) -> selfhash::Result<()> {
+        let keri_hash = hash.to_keri_hash()?.into_owned();
         self.uri.hash = keri_hash.clone();
         self.self_hash_o = Some(keri_hash);
+        Ok(())
     }
 }
 
@@ -481,7 +487,11 @@ fn test_multiple_self_hash_slots() {
                 scheme: "https".to_string(),
                 authority_o: Some("example.com".to_string()),
                 pre_hash_path: "/fancy_data/".to_string(),
-                hash: hash_function.placeholder_hash().to_keri_hash().into_owned(),
+                hash: hash_function
+                    .placeholder_hash()
+                    .to_keri_hash()
+                    .expect("pass")
+                    .into_owned(),
                 query_o: None,
                 fragment_o: None,
             },
@@ -530,7 +540,96 @@ fn test_self_hashable_json_0() {
 
 #[cfg(feature = "self-hashable-json")]
 #[test]
-fn test_self_hashable_json_1() {
+fn test_self_hashable_json_1a() {
+    use selfhash::{HashFunction, SelfHashable, SelfHashableJSON};
+    use std::{borrow::Cow, collections::HashSet};
+    {
+        println!("with self-hash field name override:");
+        // Here, the "selfie" field is provided as null.
+        let value = serde_json::from_str::<serde_json::Value>(r#"{"thing":3, "selfie": null}"#)
+            .expect("pass");
+        println!("json before self-hashing: {}", value.to_string());
+        let self_hash_path_s = maplit::hashset! { Cow::Borrowed("$.selfie") };
+        let self_hash_url_path_s = HashSet::new();
+        let mut self_hashable_json = SelfHashableJSON::new(
+            value,
+            Cow::Owned(self_hash_path_s),
+            Cow::Owned(self_hash_url_path_s),
+        )
+        .expect("pass");
+        self_hashable_json
+            .self_hash(selfhash::Blake3.new_hasher())
+            .expect("pass");
+        self_hashable_json.verify_self_hashes().expect("pass");
+        println!(
+            "json after self-hashing: {}",
+            self_hashable_json.value().to_string()
+        );
+    }
+}
+
+#[cfg(feature = "self-hashable-json")]
+#[test]
+fn test_self_hashable_json_1b() {
+    use selfhash::{HashFunction, SelfHashable, SelfHashableJSON};
+    use std::{borrow::Cow, collections::HashSet};
+    {
+        println!("with self-hash field name override:");
+        // Here, the "selfie" field is missing (which is fine, it behaves as null in this case).
+        let value = serde_json::from_str::<serde_json::Value>(r#"{"thing":3}"#).expect("pass");
+        println!("json before self-hashing: {}", value.to_string());
+        let self_hash_path_s = maplit::hashset! { Cow::Borrowed("$.selfie") };
+        let self_hash_url_path_s = HashSet::new();
+        let mut self_hashable_json = SelfHashableJSON::new(
+            value,
+            Cow::Owned(self_hash_path_s),
+            Cow::Owned(self_hash_url_path_s),
+        )
+        .expect("pass");
+        self_hashable_json
+            .self_hash(selfhash::Blake3.new_hasher())
+            .expect("pass");
+        self_hashable_json.verify_self_hashes().expect("pass");
+        println!(
+            "json after self-hashing: {}",
+            self_hashable_json.value().to_string()
+        );
+    }
+}
+
+#[cfg(feature = "self-hashable-json")]
+#[test]
+fn test_self_hashable_json_1c() {
+    use selfhash::{HashFunction, SelfHashable, SelfHashableJSON};
+    use std::{borrow::Cow, collections::HashSet};
+    {
+        println!("with self-hash field name override:");
+        let value =
+            serde_json::from_str::<serde_json::Value>(r#"{"thing":3, "blah": {"stuff": true}}"#)
+                .expect("pass");
+        println!("json before self-hashing: {}", value.to_string());
+        let self_hash_path_s = maplit::hashset! { Cow::Borrowed("$.blah.selfie") };
+        let self_hash_url_path_s = HashSet::new();
+        let mut self_hashable_json = SelfHashableJSON::new(
+            value,
+            Cow::Owned(self_hash_path_s),
+            Cow::Owned(self_hash_url_path_s),
+        )
+        .expect("pass");
+        self_hashable_json
+            .self_hash(selfhash::Blake3.new_hasher())
+            .expect("pass");
+        self_hashable_json.verify_self_hashes().expect("pass");
+        println!(
+            "json after self-hashing: {}",
+            self_hashable_json.value().to_string()
+        );
+    }
+}
+
+#[cfg(feature = "self-hashable-json")]
+#[test]
+fn test_self_hashable_json_1d() {
     use selfhash::{HashFunction, SelfHashable, SelfHashableJSON};
     use std::{borrow::Cow, collections::HashSet};
     {
@@ -539,12 +638,12 @@ fn test_self_hashable_json_1() {
             serde_json::from_str::<serde_json::Value>(r#"{"thing":3, "$id":"selfhash:///"}"#)
                 .expect("pass");
         println!("json before self-hashing: {}", value.to_string());
-        let self_hash_field_name_s = HashSet::new();
-        let self_hash_url_field_name_s = maplit::hashset! { Cow::Borrowed("$id") };
+        let self_hash_path_s = HashSet::new();
+        let self_hash_url_path_s = maplit::hashset! { Cow::Borrowed("$.$id") };
         let mut self_hashable_json = SelfHashableJSON::new(
             value,
-            Cow::Owned(self_hash_field_name_s),
-            Cow::Owned(self_hash_url_field_name_s),
+            Cow::Owned(self_hash_path_s),
+            Cow::Owned(self_hash_url_path_s),
         )
         .expect("pass");
         self_hashable_json
