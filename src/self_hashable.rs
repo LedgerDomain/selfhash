@@ -15,7 +15,8 @@ pub fn write_digest_data_using_jcs<S: Clone + SelfHashable + serde::Serialize>(
     // serde_json_canonicalizer::to_writer uses a generic impl of std::io::Write and therefore
     // implicitly requires the `Sized` trait.  Therefore passing in a reference to the reference
     // achieves the desired effect.
-    serde_json_canonicalizer::to_writer(&c, &mut hasher)?;
+    serde_json_canonicalizer::to_writer(&c, &mut hasher)
+        .map_err(|e| error!("Failed to write digest data using JCS; error was {}", e))?;
     Ok(())
 }
 
