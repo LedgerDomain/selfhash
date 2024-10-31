@@ -10,11 +10,11 @@ pub struct SelfHashURLStr(str);
 impl SelfHashURLStr {
     // TODO: This really has to return Option<&KERIHashStr>
     pub fn keri_hash_o(&self) -> Option<&KERIHashStr> {
-        let stripped = self.0.strip_prefix("selfhash:///").unwrap();
+        let stripped = self.0.strip_prefix("vjson:///").unwrap();
         if let Ok(keri_hash) = KERIHashStr::new_ref(stripped) {
             Some(keri_hash)
         } else {
-            // If what follows "selfhash:///" doesn't parse as a valid KERIHash, then consider it "None".
+            // If what follows "vjson:///" doesn't parse as a valid KERIHash, then consider it "None".
             None
         }
     }
@@ -34,12 +34,12 @@ impl pneutype::Validate for SelfHashURLStr {
     type Error = Error;
     fn validate(s: &Self::Data) -> std::result::Result<(), Self::Error> {
         require!(
-            s.starts_with("selfhash:///"),
-            "self-hash URL must start with \"selfhash:///\""
+            s.starts_with("vjson:///"),
+            "self-hash URL must start with \"vjson:///\""
         );
         // require!(
-        //     KERIHashStr::validate(s.strip_prefix("selfhash:///").unwrap()).is_ok(),
-        //     "self-hash URL must have the form \"selfhash:///X\" where X is a valid KERIHash string"
+        //     KERIHashStr::validate(s.strip_prefix("vjson:///").unwrap()).is_ok(),
+        //     "self-hash URL must have the form \"vjson:///X\" where X is a valid KERIHash string"
         // );
         Ok(())
     }

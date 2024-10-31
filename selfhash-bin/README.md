@@ -117,11 +117,11 @@ Output (no self-hash slots were defined):
 
 Run (note the single quotes around `$id`):
 
-    echo '{"blah": 3, "$id": "selfhash:///"}' | selfhash compute -s '' -u '$id'
+    echo '{"blah": 3, "$id": "vjson:///"}' | selfhash compute -s '' -u '$id'
 
 Output (self-hash configured to be a self-hash URL field):
 
-    {"$id":"selfhash:///ECwrqzmX9xCkhj_sLzbc9tZKkK5cqUJZIolDp8qqDcc8","blah":3}
+    {"$id":"vjson:///ECwrqzmX9xCkhj_sLzbc9tZKkK5cqUJZIolDp8qqDcc8","blah":3}
 
 ### `selfhash verify`
 
@@ -167,7 +167,7 @@ Output:
 
 Run (note the single quotes around `$id`):
 
-    echo '{"$id":"selfhash:///ECwrqzmX9xCkhj_sLzbc9tZKkK5cqUJZIolDp8qqDcc8","blah":3}' | selfhash verify -s '' -u '$id'
+    echo '{"$id":"vjson:///ECwrqzmX9xCkhj_sLzbc9tZKkK5cqUJZIolDp8qqDcc8","blah":3}' | selfhash verify -s '' -u '$id'
 
 Output:
 

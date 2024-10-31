@@ -41,7 +41,7 @@ struct SelfHashArgs {
     self_hash_paths: String,
     /// Optionally specify a comma-delimited list of JSONPath queries that are considered self-hash URL slots.
     /// Note that each self-hash URL field (i.e. self-hash URL path query result) must already exist and be a
-    /// valid self-hash URL (a valid default is "selfhash:///").  Each self-hash URL path must end with a
+    /// valid self-hash URL (a valid default is "vjson:///").  Each self-hash URL path must end with a
     /// plain field name (not a wildcard and not a bracket-enclosed field name).  See
     /// https://en.wikipedia.org/wiki/JSONPath for details on JSONPath.
     #[arg(short = 'u', long, default_value = "", value_name = "PATHS")]

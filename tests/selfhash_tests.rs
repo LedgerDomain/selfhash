@@ -634,9 +634,8 @@ fn test_self_hashable_json_1d() {
     use std::{borrow::Cow, collections::HashSet};
     {
         println!("with self-hash field name override:");
-        let value =
-            serde_json::from_str::<serde_json::Value>(r#"{"thing":3, "$id":"selfhash:///"}"#)
-                .expect("pass");
+        let value = serde_json::from_str::<serde_json::Value>(r#"{"thing":3, "$id":"vjson:///"}"#)
+            .expect("pass");
         println!("json before self-hashing: {}", value.to_string());
         let self_hash_path_s = HashSet::new();
         let self_hash_url_path_s = maplit::hashset! { Cow::Borrowed("$.$id") };
