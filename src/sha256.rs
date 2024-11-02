@@ -91,3 +91,27 @@ impl Hash for SHA256Hash {
         .into())
     }
 }
+
+#[cfg(feature = "sha-256")]
+impl TryFrom<&dyn Hash> for SHA256Hash {
+    type Error = crate::Error;
+    fn try_from(hash: &dyn Hash) -> crate::Result<Self> {
+        let named_hash_function = hash.hash_function()?.named_hash_function();
+        if named_hash_function != NamedHashFunction::SHA_256 {
+            crate::bail!(
+                "expected hash function to be {}, but was {}",
+                NamedHashFunction::SHA_256,
+                named_hash_function
+            );
+        }
+        let hash_byte_v = hash.to_hash_bytes()?.hash_byte_v;
+        crate::require!(
+            hash_byte_v.len() == 32,
+            "expected hash byte vector to be {} bytes, but was {} bytes",
+            32,
+            hash_byte_v.len()
+        );
+        use std::ops::Deref;
+        Ok(Self(SHA256HashInner::clone_from_slice(hash_byte_v.deref())))
+    }
+}

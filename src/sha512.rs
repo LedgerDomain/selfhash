@@ -91,3 +91,27 @@ impl Hash for SHA512Hash {
         .into())
     }
 }
+
+#[cfg(feature = "sha-512")]
+impl TryFrom<&dyn Hash> for SHA512Hash {
+    type Error = crate::Error;
+    fn try_from(hash: &dyn Hash) -> crate::Result<Self> {
+        let named_hash_function = hash.hash_function()?.named_hash_function();
+        if named_hash_function != NamedHashFunction::SHA_512 {
+            crate::bail!(
+                "expected hash function to be {}, but was {}",
+                NamedHashFunction::SHA_512,
+                named_hash_function
+            );
+        }
+        let hash_byte_v = hash.to_hash_bytes()?.hash_byte_v;
+        crate::require!(
+            hash_byte_v.len() == 64,
+            "expected hash byte vector to be {} bytes, but was {} bytes",
+            64,
+            hash_byte_v.len()
+        );
+        use std::ops::Deref;
+        Ok(Self(SHA512HashInner::clone_from_slice(hash_byte_v.deref())))
+    }
+}
