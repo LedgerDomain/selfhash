@@ -1,7 +1,7 @@
 use crate::{require, Error, Hash, HashFunction, KERIHashStr, PreferredHashFormat, Result};
 
 /// This is the str-based analog to SelfHashURL.
-#[derive(Debug, Eq, Hash, PartialEq, pneutype::PneuStr)]
+#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd, pneutype::PneuStr)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "serde", pneu_str(deserialize))]
 #[repr(transparent)]

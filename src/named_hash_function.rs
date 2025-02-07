@@ -2,7 +2,15 @@ use crate::{bail, Blake3, Error, Hash, HashFunction, Hasher, Result, SHA256, SHA
 
 /// A hash function represented by its official name.
 #[derive(
-    Clone, Debug, derive_more::Display, derive_more::Deref, Eq, derive_more::Into, PartialEq,
+    Clone,
+    Debug,
+    derive_more::Display,
+    derive_more::Deref,
+    Eq,
+    derive_more::Into,
+    Ord,
+    PartialEq,
+    PartialOrd,
 )]
 #[cfg_attr(
     feature = "serde",

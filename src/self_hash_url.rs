@@ -3,7 +3,7 @@ use pneutype::Validate;
 
 /// EXPERIMENTAL: Represents a URL that has the form "vjson:///<keri-hash>"
 // TODO: Maybe make this a general URL in which there's a "selfHash=<X>" query parameter.
-#[derive(Clone, Debug, Eq, Hash, PartialEq, pneutype::PneuString)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, pneutype::PneuString)]
 #[pneu_string(as_pneu_str = "as_self_hash_url_str", borrow = "SelfHashURLStr")]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "serde", pneu_string(deserialize))]

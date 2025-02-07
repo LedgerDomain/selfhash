@@ -5,7 +5,7 @@ use crate::{
 use std::borrow::Cow;
 
 /// This is the str-based analog to KERIHash.
-#[derive(Debug, Eq, Hash, PartialEq, pneutype::PneuStr)]
+#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd, pneutype::PneuStr)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "serde", pneu_str(deserialize))]
 #[repr(transparent)]

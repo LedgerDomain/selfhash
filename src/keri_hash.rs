@@ -1,7 +1,7 @@
 use crate::{Hash, KERIHashStr, PreferredHashFormat, Result};
 
 /// This is a concise, ASCII-only representation of a hash value, which comes from the KERI spec.
-#[derive(Clone, Debug, Eq, Hash, PartialEq, pneutype::PneuString)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, pneutype::PneuString)]
 #[pneu_string(as_pneu_str = "as_keri_hash_str", borrow = "KERIHashStr")]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "serde", pneu_string(deserialize))]

@@ -6,7 +6,7 @@ use std::borrow::Cow;
 /// This is meant to be used in end-use data structures that are self-hashing.
 // TODO: Make elements private and then ensure constructors always render valid data, so that
 // some methods (e.g. to_keri_hash) can't fail?
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct HashBytes<'a> {
     pub named_hash_function: NamedHashFunction,
