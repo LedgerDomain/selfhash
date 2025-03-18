@@ -655,3 +655,39 @@ fn test_self_hashable_json_1d() {
         );
     }
 }
+
+#[test]
+fn test_keri_hash_traits() {
+    use selfhash::KERIHash;
+    use std::collections::{BTreeMap, HashMap};
+
+    // Verify that KERIHash implements the traits we expect it to.
+
+    // Ord
+    {
+        let mut m = BTreeMap::<KERIHash, String>::new();
+        m.insert(
+            KERIHash::try_from("EjXivDidxAi2kETdFw1o36-jZUkYkxg0ayMhSBjODAgQ").expect("pass"),
+            "hippo".to_string(),
+        );
+        m.insert(
+            KERIHash::try_from("EgqvDOcj4HItWDVij-yHj0GtBPnEofatHT2xuoVD7tMY").expect("pass"),
+            "ostrich".to_string(),
+        );
+        println!("btreemap: {:#?}", m);
+    }
+
+    // Hash
+    {
+        let mut m = HashMap::<KERIHash, String>::new();
+        m.insert(
+            KERIHash::try_from("EjXivDidxAi2kETdFw1o36-jZUkYkxg0ayMhSBjODAgQ").expect("pass"),
+            "hippo".to_string(),
+        );
+        m.insert(
+            KERIHash::try_from("EgqvDOcj4HItWDVij-yHj0GtBPnEofatHT2xuoVD7tMY").expect("pass"),
+            "ostrich".to_string(),
+        );
+        println!("hashmap: {:#?}", m);
+    }
+}
