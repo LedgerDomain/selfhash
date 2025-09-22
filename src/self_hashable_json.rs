@@ -1,44 +1,25 @@
 use crate::{
-    bail, error, require, write_digest_data_using_jcs, Hash, HashFunction, KERIHashStr,
-    PreferredHashFormat, Result, SelfHashURL, SelfHashURLStr, SelfHashable,
+    bail, ensure, error, write_digest_data_using_jcs, HashFunctionT, HashRefT, HashT, Result,
+    SelfHashURL, SelfHashURLStr, SelfHashableT,
 };
 use std::borrow::Cow;
 
-/// Interprets a serde_json::Value as a KERIHash (either as a KERIHash directly or through the KERIHash
+/// Interprets a serde_json::Value as a mbx::MBHash (either as a mbx::MBHash directly or through the mbx::MBHashStr
 /// component of a SelfHashURL).
-impl Hash for serde_json::Value {
-    fn hash_function(&self) -> Result<&'static dyn HashFunction> {
+impl HashT<mbx::MBHashStr> for serde_json::Value {
+    fn as_hash_ref(&self) -> &mbx::MBHashStr {
         match self {
             serde_json::Value::String(s) => {
                 if let Ok(self_hash_url) = SelfHashURLStr::new_ref(s) {
-                    self_hash_url.hash_function()
-                } else if let Ok(keri_hash) = KERIHashStr::new_ref(s) {
-                    keri_hash.hash_function()
+                    self_hash_url.as_hash_ref()
+                } else if let Ok(mb_hash) = mbx::MBHashStr::new_ref(s) {
+                    mb_hash
                 } else {
-                    panic!("selfHash field is not a valid KERIHash or SelfHashURL.")
+                    panic!("selfHash field is not a valid MBHash or SelfHashURL.")
                 }
             }
             _ => {
-                panic!("selfHash JSON Value is expected to be a string.")
-            }
-        }
-    }
-    /// We assume that JSON always uses KERIHash, not HashBytes.
-    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> Result<PreferredHashFormat<'h>> {
-        match self {
-            serde_json::Value::String(s) => {
-                if let Ok(self_hash_url) = SelfHashURLStr::new_ref(s) {
-                    Ok(PreferredHashFormat::KERIHash(Cow::Borrowed(
-                        self_hash_url.keri_hash_o().unwrap(),
-                    )))
-                } else if let Ok(keri_hash) = KERIHashStr::new_ref(s) {
-                    Ok(PreferredHashFormat::KERIHash(Cow::Borrowed(keri_hash)))
-                } else {
-                    panic!("selfHash field is not a valid KERIHash or SelfHashURL.")
-                }
-            }
-            _ => {
-                panic!("selfHash JSON Value is expected to be a string.")
+                panic!("serde_json::Value::as_hash_ref requires a String value.")
             }
         }
     }
@@ -46,13 +27,18 @@ impl Hash for serde_json::Value {
 
 /// Allows serde_json::Value to be used as a SelfHashable in which the only self-hash slot is the
 /// top-level field "selfHash".  See also SelfHashableJSON for a more configurable option.
-impl SelfHashable for serde_json::Value {
-    fn write_digest_data(&self, hasher: &mut dyn crate::Hasher) -> Result<()> {
+impl SelfHashableT<mbx::MBHashStr> for serde_json::Value {
+    fn write_digest_data(
+        &self,
+        hasher: &mut <<mbx::MBHashStr as HashRefT>::HashFunction as HashFunctionT<
+            mbx::MBHashStr,
+        >>::Hasher,
+    ) -> Result<()> {
         write_digest_data_using_jcs(self, hasher)
     }
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
-    ) -> Result<Box<dyn std::iter::Iterator<Item = Option<&dyn crate::Hash>> + 'a>> {
+    ) -> Result<Box<dyn std::iter::Iterator<Item = Option<&'b mbx::MBHashStr>> + 'a>> {
         if !self.is_object() {
             bail!("self-hashable JSON value is expected to be a JSON object");
         }
@@ -61,7 +47,7 @@ impl SelfHashable for serde_json::Value {
         let self_hash_oib = match self_hash_o {
             Some(serde_json::Value::Null) | None => Box::new(std::iter::once(None)),
             Some(serde_json::Value::String(_)) => Box::new(std::iter::once(
-                self_hash_o.map(|self_hash| self_hash as &dyn crate::Hash),
+                self_hash_o.map(|self_hash| self_hash.as_hash_ref()),
             )),
             Some(_) => {
                 bail!("selfHash field must be a string or null.");
@@ -69,13 +55,13 @@ impl SelfHashable for serde_json::Value {
         };
         Ok(self_hash_oib)
     }
-    fn set_self_hash_slots_to(&mut self, hash: &dyn crate::Hash) -> Result<()> {
+    fn set_self_hash_slots_to(&mut self, hash: &mbx::MBHashStr) -> Result<()> {
         let self_as_object_mut = self
             .as_object_mut()
             .ok_or_else(|| error!("self-hashable JSON value is expected to be a JSON object"))?;
         self_as_object_mut.insert(
             "selfHash".to_string(),
-            serde_json::Value::String(hash.to_keri_hash()?.to_string()),
+            serde_json::Value::String(hash.to_string()),
         );
         Ok(())
     }
@@ -98,24 +84,24 @@ pub struct SelfHashableJSON<'v, 'w: 'v> {
 /// name for each self-hash slot.
 fn jsonpath_terminating_identifier(path: &str) -> Result<&str> {
     // Not sure if this is really necessary.
-    // require!(path.starts_with("$."), "self-hash [URL] path must begin with `$.` (indicating the path starts at the root element)");
+    // ensure!(path.starts_with("$."), "self-hash [URL] path must begin with `$.` (indicating the path starts at the root element)");
     let (_, after_period) = path.rsplit_once('.').ok_or_else(|| error!("self-hash [URL] path must end with `.<identifier>`, where <identifier> may not contain `[`, `]`, `'`, or `\"`; path was {}", path))?;
-    require!(
+    ensure!(
         !after_period.contains('['),
         "self-hash [URL] path terminating identifier may not contain `[`; path was {}",
         path
     );
-    require!(
+    ensure!(
         !after_period.contains(']'),
         "self-hash [URL] path terminating identifier may not contain `]`; path was {}",
         path
     );
-    require!(
+    ensure!(
         !after_period.contains('\''),
         "self-hash [URL] path terminating identifier may not contain `'`; path was {}",
         path
     );
-    require!(
+    ensure!(
         !after_period.contains('"'),
         "self-hash [URL] path terminating identifier may not contain `\"`; path was {}",
         path
@@ -129,11 +115,11 @@ impl<'v, 'w: 'v> SelfHashableJSON<'v, 'w> {
         self_hash_path_s: Cow<'v, std::collections::HashSet<Cow<'w, str>>>,
         self_hash_url_path_s: Cow<'v, std::collections::HashSet<Cow<'w, str>>>,
     ) -> Result<Self> {
-        require!(
+        ensure!(
             value.is_object(),
             "self-hashable JSON value is expected to be a JSON object"
         );
-        require!(
+        ensure!(
             self_hash_path_s.is_disjoint(&self_hash_url_path_s),
             "self-hash paths and self-hash URL paths must be disjoint."
         );
@@ -144,14 +130,14 @@ impl<'v, 'w: 'v> SelfHashableJSON<'v, 'w> {
             let mut selector = jsonpath_lib::selector(&value);
             let mut query_result_count = 0;
             for query_value in selector(self_hash_path)?.into_iter() {
-                require!(
+                ensure!(
                     query_value.is_string() || query_value.is_null(),
                     "self-hash field (query was {:?}) is expected to be a string or null",
                     self_hash_path
                 );
                 if let Some(query_value_str) = query_value.as_str() {
-                    require!(
-                        KERIHashStr::new_ref(query_value_str).is_ok(),
+                    ensure!(
+                        mbx::MBHashStr::new_ref(query_value_str).is_ok(),
                         "self-hash field {:?} (query was {:?}) is expected to be a valid self-hash",
                         query_value,
                         self_hash_path
@@ -179,12 +165,12 @@ impl<'v, 'w: 'v> SelfHashableJSON<'v, 'w> {
             let mut selector = jsonpath_lib::selector(&value);
             let mut query_result_count = 0;
             for query_value in selector(self_hash_url_path)?.into_iter() {
-                require!(
+                ensure!(
                     query_value.is_string(),
                     "self-hash URL field (query was {:?}) is expected to be a string",
                     self_hash_url_path
                 );
-                require!(
+                ensure!(
                     SelfHashURLStr::new_ref(query_value.as_str().unwrap()).is_ok(),
                     "self-hash URL field {:?} (query was {:?}) is expected to be a valid self-hash URL",
                     query_value,
@@ -207,7 +193,7 @@ impl<'v, 'w: 'v> SelfHashableJSON<'v, 'w> {
             self_hash_url_count += 1;
         }
 
-        require!(self_hash_count + self_hash_url_count > 0, "no self-hash or self-hash URL fields found, meaning that this JSON value is not self-hashable");
+        ensure!(self_hash_count + self_hash_url_count > 0, "no self-hash or self-hash URL fields found, meaning that this JSON value is not self-hashable");
 
         Ok(SelfHashableJSON {
             value,
@@ -227,14 +213,21 @@ impl<'v, 'w: 'v> SelfHashableJSON<'v, 'w> {
     }
 }
 
-impl SelfHashable for SelfHashableJSON<'_, '_> {
-    fn write_digest_data(&self, mut hasher: &mut dyn crate::Hasher) -> Result<()> {
+impl SelfHashableT<mbx::MBHashStr> for SelfHashableJSON<'_, '_> {
+    fn write_digest_data(
+        &self,
+        mut hasher: &mut <<mbx::MBHashStr as HashRefT>::HashFunction as HashFunctionT<
+            mbx::MBHashStr,
+        >>::Hasher,
+    ) -> Result<()> {
         let mut c = SelfHashableJSON {
             value: self.value.clone(),
             self_hash_path_s: self.self_hash_path_s.clone(),
             self_hash_url_path_s: self.self_hash_url_path_s.clone(),
         };
-        c.set_self_hash_slots_to(hasher.hash_function().placeholder_hash())?;
+        use crate::HasherT;
+        let placeholder_hash = hasher.hash_function().placeholder_hash();
+        c.set_self_hash_slots_to(placeholder_hash.as_ref())?;
         // Use JCS to produce canonical output.  The `&mut hasher` ridiculousness is because
         // serde_json_canonicalizer::to_writer uses a generic impl of std::io::Write and therefore
         // implicitly requires the `Sized` trait.  Therefore passing in a reference to the reference
@@ -244,7 +237,7 @@ impl SelfHashable for SelfHashableJSON<'_, '_> {
     }
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
-    ) -> Result<Box<dyn std::iter::Iterator<Item = Option<&dyn crate::Hash>> + 'a>> {
+    ) -> Result<Box<dyn std::iter::Iterator<Item = Option<&'b mbx::MBHashStr>> + 'a>> {
         // println!(
         //     "SelfHashableJSON::self_hash_oi; self.value: {:?}",
         //     self.value
@@ -268,7 +261,7 @@ impl SelfHashable for SelfHashableJSON<'_, '_> {
                         self_hash_v.push(None);
                     }
                     serde_json::Value::String(_) => {
-                        self_hash_v.push(Some(query_value as &dyn crate::Hash));
+                        self_hash_v.push(Some(query_value.as_hash_ref()));
                     }
                     _ => {
                         bail!(
@@ -315,7 +308,7 @@ impl SelfHashable for SelfHashableJSON<'_, '_> {
                         bail!("a self-hash URL path query result can not be missing for self-hashing or self-hash verification; path was {}", self_hash_url_path);
                     }
                     serde_json::Value::String(_) => {
-                        self_hash_v.push(Some(query_value as &dyn crate::Hash));
+                        self_hash_v.push(Some(query_value.as_hash_ref()));
                     }
                     _ => {
                         bail!(
@@ -341,10 +334,9 @@ impl SelfHashable for SelfHashableJSON<'_, '_> {
         }
         Ok(Box::new(self_hash_v.into_iter()))
     }
-    fn set_self_hash_slots_to(&mut self, hash: &dyn crate::Hash) -> Result<()> {
+    fn set_self_hash_slots_to(&mut self, hash: &mbx::MBHashStr) -> Result<()> {
         // println!("SelfHashableJSON::set_self_hash_slots_to");
-        let keri_hash = hash.to_keri_hash()?;
-        let keri_hash_string = keri_hash.to_string();
+        let hash_string = hash.to_string();
         // Because of the signature of jsonpath_lib::replace_with, we have to actually hand the ownership
         // of Value over, and then take it back.  DUMB, but whateva.
         let mut value = self.value.take();
@@ -365,7 +357,7 @@ impl SelfHashable for SelfHashableJSON<'_, '_> {
                         //     _query_value, self_hash_path
                         // );
                         *query_result_count += 1;
-                        Some(serde_json::Value::String(keri_hash_string.clone()))
+                        Some(serde_json::Value::String(hash_string.clone()))
                     },
                 )
                 .map_err(|e| {
@@ -397,7 +389,7 @@ impl SelfHashable for SelfHashableJSON<'_, '_> {
                         debug_assert!(!parent.contains_key(terminating_identifier));
                         parent.insert(
                             terminating_identifier.to_string(),
-                            serde_json::Value::String(keri_hash_string.clone()),
+                            serde_json::Value::String(hash_string.clone()),
                         );
                     } else {
                         // First, validate that the parent_query will produce a JSON object, so we can return
@@ -406,10 +398,10 @@ impl SelfHashable for SelfHashableJSON<'_, '_> {
                             let mut selector = jsonpath_lib::selector(&value);
                             let mut query_result_count = 0;
                             for query_value in selector(parent_path)?.into_iter() {
-                                require!(query_value.is_object(), "self-hash path query parent (parent path was {}) must be a JSON object; path was {}", parent_path, self_hash_path);
+                                ensure!(query_value.is_object(), "self-hash path query parent (parent path was {}) must be a JSON object; path was {}", parent_path, self_hash_path);
                                 query_result_count += 1;
                             }
-                            require!(query_result_count == 1, "self-hash path query parent (parent path was {}) must produce exactly 1 result (it produced {} results); path was {}", parent_path, query_result_count, self_hash_path);
+                            ensure!(query_result_count == 1, "self-hash path query parent (parent path was {}) must produce exactly 1 result (it produced {} results); path was {}", parent_path, query_result_count, self_hash_path);
                         }
                         value = jsonpath_lib::replace_with(
                             value,
@@ -421,7 +413,7 @@ impl SelfHashable for SelfHashableJSON<'_, '_> {
                                     debug_assert!(!parent.contains_key(terminating_identifier));
                                     parent.insert(
                                         terminating_identifier.to_string(),
-                                        serde_json::Value::String(keri_hash_string.clone()),
+                                        serde_json::Value::String(hash_string.clone()),
                                     );
                                 }
                                 Some(query_value)
@@ -448,7 +440,7 @@ impl SelfHashable for SelfHashableJSON<'_, '_> {
                     let mut self_hash_url =
                         SelfHashURL::try_from(query_value.as_str().expect("programmer error"))
                             .unwrap();
-                    self_hash_url.set_self_hash_slots_to_keri_hash(&keri_hash);
+                    self_hash_url.set_self_hash_slots_to_mb_hash(hash);
                     Some(serde_json::Value::String(self_hash_url.to_string()))
                 },
             )

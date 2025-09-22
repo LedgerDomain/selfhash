@@ -1,4 +1,4 @@
-use selfhash::{Blake3, HashFunction, SelfHashable, SelfHashableJSON};
+use selfhash::{HashFunctionT, SelfHashableJSON, SelfHashableT};
 use std::{
     borrow::Cow,
     collections::HashSet,
@@ -103,7 +103,8 @@ impl Compute {
 
         // Self-hash the JSON.
         // TODO: Arg to specify the hash function
-        json.self_hash(Blake3.new_hasher())
+        let mb_hash_function = selfhash::MBHashFunction::blake3(mbx::Base::Base64Url);
+        json.self_hash(mb_hash_function.new_hasher())
             .expect("self-hash failed");
 
         // Verify the self-hash.  This is mostly a sanity check.
@@ -165,9 +166,7 @@ impl Verify {
         // Verify the self-hash.
         let self_hash = json
             .verify_self_hashes()
-            .expect("self-hash verification failed")
-            .to_keri_hash()
-            .unwrap();
+            .expect("self-hash verification failed");
 
         // Print the verified self-hash with optional newline.
         std::io::stdout().write(self_hash.as_bytes()).unwrap();

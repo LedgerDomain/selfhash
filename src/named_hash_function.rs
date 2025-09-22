@@ -1,8 +1,9 @@
-use crate::{bail, Blake3, Error, Hash, HashFunction, Hasher, Result, SHA256, SHA512};
+use crate::{bail, Error, HashFunctionT};
 
 /// A hash function represented by its official name.
 #[derive(
     Clone,
+    Copy,
     Debug,
     derive_more::Display,
     derive_more::Deref,
@@ -30,19 +31,12 @@ impl NamedHashFunction {
     /// See https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
     pub const SHA_512: NamedHashFunction = NamedHashFunction(SHA_512_STR);
 
-    pub fn try_from_keri_prefix(keri_prefix: &str) -> Result<Self> {
-        match keri_prefix {
-            "E" => Ok(Self::BLAKE3),
-            "I" => Ok(Self::SHA_256),
-            "0G" => Ok(Self::SHA_512),
-            _ => bail!("unrecognized keri_prefix {:?}", keri_prefix),
-        }
-    }
-    pub fn as_hash_function(&self) -> &'static dyn HashFunction {
+    #[cfg(feature = "mbx")]
+    pub fn as_mb_hash_function(&self, base: mbx::Base) -> crate::MBHashFunction {
         match self.0 {
-            BLAKE3_STR => &Blake3,
-            SHA_256_STR => &SHA256,
-            SHA_512_STR => &SHA512,
+            BLAKE3_STR => crate::MBHashFunction::blake3(base),
+            SHA_256_STR => crate::MBHashFunction::sha2_256(base),
+            SHA_512_STR => crate::MBHashFunction::sha2_512(base),
             _ => {
                 panic!("programmer error: unrecognized hash function name");
             }
@@ -72,20 +66,69 @@ impl std::str::FromStr for NamedHashFunction {
     }
 }
 
-impl HashFunction for NamedHashFunction {
-    fn named_hash_function(&self) -> NamedHashFunction {
-        self.clone()
+#[cfg(feature = "mbx")]
+impl HashFunctionT<mbx::MBHashStr> for NamedHashFunction {
+    type Hasher = crate::MBHasher;
+    fn placeholder_hash(&self) -> std::borrow::Cow<'static, mbx::MBHashStr> {
+        self.as_mb_hash_function(mbx::Base::Base64Url)
+            .placeholder_hash()
     }
-    fn keri_prefix(&self) -> &'static str {
-        self.as_hash_function().keri_prefix()
-    }
-    fn placeholder_hash(&self) -> &'static dyn Hash {
-        self.as_hash_function().placeholder_hash()
-    }
-    fn equals(&self, other: &dyn HashFunction) -> bool {
-        self.as_hash_function().equals(other)
-    }
-    fn new_hasher(&self) -> Box<dyn Hasher> {
-        self.as_hash_function().new_hasher()
+    fn new_hasher(&self) -> Self::Hasher {
+        self.as_mb_hash_function(mbx::Base::Base64Url).new_hasher()
     }
 }
+
+// impl HashFunctionT<HashBytes<'static>> for NamedHashFunction {
+//     type Hasher = HashBytesHasher;
+//     fn placeholder_hash(&self) -> std::borrow::Cow<'static, HashBytes<'static>> {
+//         std::borrow::Cow::Owned(HashBytes::new(
+//             self.clone(),
+//             std::borrow::Cow::Borrowed(self.placeholder_bytes()),
+//         ))
+//     }
+//     fn new_hasher(&self) -> Self::Hasher {
+//         let hasher_b: Box<dyn HasherDynT> = match *self {
+//             NamedHashFunction::BLAKE3 => Box::new(crate::Blake3.new_hasher()),
+//             NamedHashFunction::SHA_256 => Box::new(crate::SHA256.new_hasher()),
+//             NamedHashFunction::SHA_512 => Box::new(crate::SHA512.new_hasher()),
+//             _ => {
+//                 panic!("programmer error: unrecognized hash function name");
+//             }
+//         };
+//         HashBytesHasher {
+//             named_hash_function: self.clone(),
+//             hasher_b,
+//         }
+//     }
+// }
+
+// // TEMP HACK
+// pub struct HashBytesHasher {
+//     named_hash_function: NamedHashFunction,
+//     hasher_b: Box<dyn HasherDynT>,
+// }
+
+// impl HasherT for HashBytesHasher {
+//     type HashRef = HashBytes<'static>;
+//     fn hash_function(&self) -> <Self::HashRef as HashRefT>::HashFunction {
+//         self.named_hash_function
+//     }
+//     fn update(&mut self, byte_v: &[u8]) {
+//         self.hasher_b.update(byte_v);
+//     }
+//     fn finalize(self) -> <Self::HashRef as ToOwned>::Owned {
+//         HashBytes::new(
+//             self.named_hash_function,
+//             self.hasher_b.finalize().hash_bytes().into_owned().into(),
+//         )
+//     }
+// }
+
+// impl std::io::Write for HashBytesHasher {
+//     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+//         self.hasher_b.write(buf)
+//     }
+//     fn flush(&mut self) -> std::io::Result<()> {
+//         self.hasher_b.flush()
+//     }
+// }

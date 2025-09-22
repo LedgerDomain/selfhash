@@ -1,4 +1,4 @@
-use crate::{Hash, KERIHashStr, PreferredHashFormat, Result, SelfHashURLStr};
+use crate::{HashT, SelfHashURLStr};
 use pneutype::Validate;
 
 /// EXPERIMENTAL: Represents a URL that has the form "vjson:///<keri-hash>"
@@ -10,23 +10,20 @@ use pneutype::Validate;
 pub struct SelfHashURL(String);
 
 impl SelfHashURL {
-    pub fn new(keri_hash: &KERIHashStr) -> Self {
-        let mut s = String::with_capacity(12 + keri_hash.len());
+    pub fn new(mb_hash: &mbx::MBHashStr) -> Self {
+        let mut s = String::with_capacity("vjson:///".len() + mb_hash.len());
         s.push_str("vjson:///");
-        s.push_str(keri_hash.as_str());
+        s.push_str(mb_hash.as_str());
         Self::try_from(s).unwrap()
     }
-    pub fn set_self_hash_slots_to_keri_hash(&mut self, keri_hash: &KERIHashStr) {
-        self.0 = format!("vjson:///{}", keri_hash);
+    pub fn set_self_hash_slots_to_mb_hash(&mut self, mb_hash: &mbx::MBHashStr) {
+        self.0 = format!("vjson:///{}", mb_hash);
         assert!(SelfHashURLStr::validate(&self.0).is_ok());
     }
 }
 
-impl Hash for SelfHashURL {
-    fn hash_function(&self) -> Result<&'static dyn crate::HashFunction> {
-        self.keri_hash_o().unwrap().hash_function()
-    }
-    fn as_preferred_hash_format<'s: 'h, 'h>(&'s self) -> Result<PreferredHashFormat<'h>> {
-        Ok(std::borrow::Cow::Borrowed(self.keri_hash_o().unwrap()).into())
+impl HashT<mbx::MBHashStr> for SelfHashURL {
+    fn as_hash_ref(&self) -> &mbx::MBHashStr {
+        self.mb_hash_o().unwrap()
     }
 }

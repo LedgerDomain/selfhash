@@ -1,27 +1,13 @@
-use selfhash::{require, Error};
+use selfhash::{ensure, Error};
 
-#[test]
-fn test_serialize_deserialize_keri_hash() {
-    let keri_hash =
-        selfhash::KERIHash::try_from("EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").expect("pass");
-    let keri_hash_json = serde_json_canonicalizer::to_vec(&keri_hash).expect("pass");
-    assert_eq!(
-        std::str::from_utf8(keri_hash_json.as_slice()).expect("pass"),
-        "\"EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\""
-    );
-    let keri_hash_deserialized: selfhash::KERIHash =
-        serde_json::from_slice(keri_hash_json.as_slice()).expect("pass");
-    assert_eq!(keri_hash, keri_hash_deserialized);
-}
-
-pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn selfhash::Hash> {
-    match hash_bytes.named_hash_function {
+pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn selfhash::HashDynT> {
+    match hash_bytes.named_hash_function() {
         selfhash::NamedHashFunction::BLAKE3 => {
             #[cfg(feature = "blake3")]
             {
                 let hash_byte_v: [u8; 32] = hash_bytes
-                    .hash_byte_v
-                    .into_owned()
+                    .bytes()
+                    // .into_owned()
                     .try_into()
                     .expect("programmer error");
                 let hash = blake3::Hash::from(hash_byte_v);
@@ -36,7 +22,7 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
             #[cfg(feature = "sha-256")]
             {
                 let hash = selfhash::SHA256Hash::from(selfhash::SHA256HashInner::clone_from_slice(
-                    hash_bytes.hash_byte_v.as_ref(),
+                    hash_bytes.bytes(),
                 ));
                 Box::new(hash)
             }
@@ -49,7 +35,7 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
             #[cfg(feature = "sha-512")]
             {
                 let hash = selfhash::SHA512Hash::from(selfhash::SHA512HashInner::clone_from_slice(
-                    hash_bytes.hash_byte_v.as_ref(),
+                    hash_bytes.bytes(),
                 ));
                 Box::new(hash)
             }
@@ -64,291 +50,324 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
     }
 }
 
-/// Parses the known-to-selfhash hashes via their KERIHash.
-pub fn hash_from_keri_hash(keri_hash: &selfhash::KERIHashStr) -> Box<dyn selfhash::Hash> {
-    hash_from_hash_bytes(keri_hash.to_hash_bytes())
-}
+//
+// HashBytes
+//
 
-// Produces a Vec containing all the known hash functions (subject to what features are enabled).
-fn hash_functions() -> Vec<&'static dyn selfhash::HashFunction> {
-    #[allow(unused_mut)]
-    let mut hash_function_v: Vec<&'static dyn selfhash::HashFunction> = Vec::new();
-    #[cfg(feature = "blake3")]
-    hash_function_v.push(&selfhash::Blake3);
-    #[cfg(feature = "sha-256")]
-    hash_function_v.push(&selfhash::SHA256);
-    #[cfg(feature = "sha-512")]
-    hash_function_v.push(&selfhash::SHA512);
-    hash_function_v
-}
+// /// A simple example of a self-hashing data structure, where the self-hash is kept in HashBytes
+// /// format (i.e. binary) for fewer allocations and conversions.  Note that there is only one
+// /// self-hash slot in the structure.  An example with multiple self-hash slots is given elsewhere.
+// #[derive(Clone, Debug, serde::Serialize)]
+// pub struct SimpleDataHash<
+//     HashRef: selfhash::HashRefT + ?Sized + ToOwned<Owned = Hash>,
+//     Hash: Clone + selfhash::HashT<HashRef> + serde::Serialize,
+// > {
+//     pub marker: std::marker::PhantomData<HashRef>,
+//     /// Self-hash of the previous SimpleData.
+//     // #[serde(skip_serializing_if = "Option::is_none")]
+//     #[serde(rename = "previous")]
+//     pub previous_o: Option<Hash>,
+//     pub name: String,
+//     pub stuff_count: u32,
+//     pub data_byte_v: Vec<u8>,
+//     // #[serde(skip_serializing_if = "Option::is_none")]
+//     #[serde(rename = "self_hash")]
+//     pub self_hash_o: Option<Hash>,
+// }
 
-#[test]
-#[serial_test::serial]
-fn test_hash_roundtrips() {
-    for hash_function in hash_functions().into_iter() {
-        println!("---------------------------------------------------");
-        println!(
-            "test_hash_roundtrips; testing: {:#?}",
-            hash_function.named_hash_function()
-        );
-        let mut hasher = hash_function.new_hasher();
-        hasher.update(b"blah blah blah blah hippos");
-        let hash_b = hasher.finalize();
-        let keri_hash = hash_b.to_keri_hash().expect("pass");
-        println!("keri_hash: {}", keri_hash);
-        let hash_parsed_b = hash_from_keri_hash(&keri_hash);
-        assert!(hash_parsed_b.equals(hash_b.as_ref()).expect("pass"));
+// impl<
+//         HashRef: Clone + selfhash::HashRefT + ?Sized + ToOwned<Owned = Hash>,
+//         Hash: Clone + selfhash::HashT<HashRef> + serde::Serialize,
+//     > selfhash::SelfHashableT<HashRef> for SimpleDataHash<HashRef, Hash>
+// {
+//     fn write_digest_data(
+//         &self,
+//         hasher: &mut <<HashRef as selfhash::HashRefT>::HashFunction as selfhash::HashFunctionT<
+//             HashRef,
+//         >>::Hasher,
+//     ) -> selfhash::Result<()> {
+//         selfhash::write_digest_data_using_jcs(self, hasher)
+//     }
+//     fn self_hash_oi<'a, 'b: 'a>(
+//         &'b self,
+//     ) -> selfhash::Result<Box<dyn std::iter::Iterator<Item = Option<&'b HashRef>> + 'a>> {
+//         Ok(Box::new(std::iter::once(
+//             self.self_hash_o.as_ref().map(|s| s.as_hash_ref()),
+//         )))
+//     }
+//     // fn set_self_hash_slots_to(&mut self, hash: &HashRef) -> selfhash::Result<()> {
+//     //     self.self_hash_o = Some(hash.to_owned());
+//     //     Ok(())
+//     // }
+//     fn set_self_hash_slots_to(&mut self, hash: &HashRef) -> selfhash::Result<()> {
+//         self.self_hash_o = Some(hash.to_owned());
+//         Ok(())
+//     }
+// }
 
-        // Round trip to HashBytes as well.
-        let hash_bytes = hash_b.to_hash_bytes().expect("pass");
-        let hash_roundtripped_b = hash_from_hash_bytes(hash_bytes);
-        assert!(hash_roundtripped_b.equals(hash_b.as_ref()).expect("pass"));
-    }
-}
+// fn test_self_hashable_simple_data_hash_case<
+//     // HashFunction: std::fmt::Debug + selfhash::HashFunctionT<HashRef>,
+//     HashRef: Clone + selfhash::HashRefT + ?Sized + ToOwned<Owned = Hash>,
+//     Hash: Clone + selfhash::HashT<HashRef> + serde::Serialize,
+// >(
+//     hash_function: <HashRef as selfhash::HashRefT>::HashFunction,
+// ) where
+//     <HashRef as selfhash::HashRefT>::HashFunction: std::fmt::Debug,
+// {
+//     println!("---------------------------------------------------");
+//     println!(
+//         "test_self_hashable_simple_data_hash_case; hash_function: {:?}",
+//         hash_function
+//     );
 
-/// A simple example of a self-hashing data structure, where the self-hash is kept in HashBytes
-/// format (i.e. binary) for fewer allocations and conversions.  Note that there is only one
-/// self-hash slot in the structure.  An example with multiple self-hash slots is given elsewhere.
+//     let mut simple_data_0 = SimpleDataHash::<HashRef, Hash> {
+//         marker: std::marker::PhantomData,
+//         previous_o: None,
+//         name: "hippodonkey".to_string(),
+//         stuff_count: 42,
+//         data_byte_v: vec![0x01, 0x02, 0x03],
+//         self_hash_o: None,
+//     };
+//     // println!("simple_data_0 before self-hash: {:#?}", simple_data_0);
+//     println!(
+//         "simple_data_0 before self-hash as JCS: {}",
+//         std::str::from_utf8(
+//             serde_json_canonicalizer::to_vec(&simple_data_0)
+//                 .expect("pass")
+//                 .as_slice()
+//         )
+//         .expect("pass")
+//     );
+//     use selfhash::{HashFunctionT, SelfHashableT};
+//     simple_data_0
+//         .self_hash(hash_function.new_hasher())
+//         .expect("pass");
+//     // println!("simple_data_0 after self-hash: {:#?}", simple_data_0);
+//     println!(
+//         "simple_data_0 after self-hash as JCS: {}",
+//         std::str::from_utf8(
+//             serde_json_canonicalizer::to_vec(&simple_data_0)
+//                 .expect("pass")
+//                 .as_slice()
+//         )
+//         .expect("pass")
+//     );
+//     simple_data_0.verify_self_hashes().expect("pass");
+//     println!("simple_data_0 self self-hash verified!");
+//     // Let's make sure that altering the data causes the verification to fail.
+//     let mut altered_simple_data_0 = simple_data_0.clone();
+//     altered_simple_data_0.name = "maaaaaaaaaa".to_string();
+//     assert!(altered_simple_data_0.verify_self_hashes().is_err());
+
+//     let mut simple_data_1 = SimpleDataHash {
+//         marker: std::marker::PhantomData,
+//         previous_o: simple_data_0.self_hash_o.clone(),
+//         name: "grippoponkey".to_string(),
+//         stuff_count: 43,
+//         data_byte_v: vec![0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80],
+//         self_hash_o: None,
+//     };
+//     // println!("simple_data_1 before self-hash: {:#?}", simple_data_1);
+//     println!(
+//         "simple_data_1 before self-hash as JCS: {}",
+//         std::str::from_utf8(
+//             serde_json_canonicalizer::to_vec(&simple_data_1)
+//                 .expect("pass")
+//                 .as_slice()
+//         )
+//         .expect("pass")
+//     );
+//     simple_data_1
+//         .self_hash(hash_function.new_hasher())
+//         .expect("pass");
+//     // println!("simple_data_1 after self-hash: {:#?}", simple_data_1);
+//     println!(
+//         "simple_data_1 after self-hash as JCS: {}",
+//         std::str::from_utf8(
+//             serde_json_canonicalizer::to_vec(&simple_data_1)
+//                 .expect("pass")
+//                 .as_slice()
+//         )
+//         .expect("pass")
+//     );
+//     simple_data_1.verify_self_hashes().expect("pass");
+//     println!("simple_data_1 self self-hash verified!");
+// }
+
+// #[test]
+// #[serial_test::serial]
+// fn test_self_hashable_simple_data_hash_blake3() {
+//     test_self_hashable_simple_data_hash_case::<blake3::Hash, selfhash::Blake3>(selfhash::Blake3);
+// }
+
+// #[test]
+// #[serial_test::serial]
+// fn test_self_hashable_simple_data_hash_sha256() {
+//     test_self_hashable_simple_data_hash_case(selfhash::SHA256);
+// }
+
+// #[test]
+// #[serial_test::serial]
+// fn test_self_hashable_simple_data_hash_sha512() {
+//     test_self_hashable_simple_data_hash_case(selfhash::SHA512);
+// }
+
+//
+// MBX
+//
+
+/// MBHash-using version of SimpleData.
+#[cfg(feature = "mbx")]
 #[derive(Clone, Debug, serde::Serialize)]
-pub struct SimpleDataHashBytes {
-    /// Self-hash of the previous SimpleData.
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "previous")]
-    pub previous_o: Option<selfhash::HashBytes<'static>>,
-    pub name: String,
-    pub stuff_count: u32,
-    pub data_byte_v: Vec<u8>,
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "self_hash")]
-    pub self_hash_o: Option<selfhash::HashBytes<'static>>,
-}
-
-impl selfhash::SelfHashable for SimpleDataHashBytes {
-    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) -> selfhash::Result<()> {
-        selfhash::write_digest_data_using_jcs(self, hasher)
-    }
-    fn self_hash_oi<'a, 'b: 'a>(
-        &'b self,
-    ) -> selfhash::Result<Box<dyn std::iter::Iterator<Item = Option<&dyn selfhash::Hash>> + 'a>>
-    {
-        Ok(Box::new(std::iter::once(
-            self.self_hash_o
-                .as_ref()
-                .map(|s| -> &dyn selfhash::Hash { s }),
-        )))
-    }
-    fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) -> selfhash::Result<()> {
-        self.self_hash_o = Some(hash.to_hash_bytes()?.into_owned());
-        Ok(())
-    }
-}
-
-#[test]
-#[serial_test::serial]
-fn test_self_hashable_hash_bytes() {
-    for hash_function in hash_functions() {
-        println!("---------------------------------------------------");
-        println!(
-            "test_self_hashable_hash_bytes; hash_function KERI prefix: {:?}",
-            hash_function.keri_prefix()
-        );
-
-        let mut simple_data_0 = SimpleDataHashBytes {
-            previous_o: None,
-            name: "hippodonkey".to_string(),
-            stuff_count: 42,
-            data_byte_v: vec![0x01, 0x02, 0x03],
-            self_hash_o: None,
-        };
-        // println!("simple_data_0 before self-hash: {:#?}", simple_data_0);
-        println!(
-            "simple_data_0 before self-hash as JCS: {}",
-            std::str::from_utf8(
-                serde_json_canonicalizer::to_vec(&simple_data_0)
-                    .expect("pass")
-                    .as_slice()
-            )
-            .expect("pass")
-        );
-        use selfhash::SelfHashable;
-        simple_data_0
-            .self_hash(hash_function.new_hasher())
-            .expect("pass");
-        // println!("simple_data_0 after self-hash: {:#?}", simple_data_0);
-        println!(
-            "simple_data_0 after self-hash as JCS: {}",
-            std::str::from_utf8(
-                serde_json_canonicalizer::to_vec(&simple_data_0)
-                    .expect("pass")
-                    .as_slice()
-            )
-            .expect("pass")
-        );
-        simple_data_0.verify_self_hashes().expect("pass");
-        println!("simple_data_0 self self-hash verified!");
-        // Let's make sure that altering the data causes the verification to fail.
-        let mut altered_simple_data_0 = simple_data_0.clone();
-        altered_simple_data_0.name = "maaaaaaaaaa".to_string();
-        assert!(altered_simple_data_0.verify_self_hashes().is_err());
-
-        let mut simple_data_1 = SimpleDataHashBytes {
-            previous_o: simple_data_0.self_hash_o.clone(),
-            name: "grippoponkey".to_string(),
-            stuff_count: 43,
-            data_byte_v: vec![0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80],
-            self_hash_o: None,
-        };
-        // println!("simple_data_1 before self-hash: {:#?}", simple_data_1);
-        println!(
-            "simple_data_1 before self-hash as JCS: {}",
-            std::str::from_utf8(
-                serde_json_canonicalizer::to_vec(&simple_data_1)
-                    .expect("pass")
-                    .as_slice()
-            )
-            .expect("pass")
-        );
-        simple_data_1
-            .self_hash(hash_function.new_hasher())
-            .expect("pass");
-        // println!("simple_data_1 after self-hash: {:#?}", simple_data_1);
-        println!(
-            "simple_data_1 after self-hash as JCS: {}",
-            std::str::from_utf8(
-                serde_json_canonicalizer::to_vec(&simple_data_1)
-                    .expect("pass")
-                    .as_slice()
-            )
-            .expect("pass")
-        );
-        simple_data_1.verify_self_hashes().expect("pass");
-        println!("simple_data_1 self self-hash verified!");
-    }
-}
-
-/// KERIHash-using version of SimpleData.
-#[derive(Clone, Debug, serde::Serialize)]
-pub struct SimpleDataKERIHash {
+pub struct SimpleDataMBHash {
     /// Self-hash of the previous SimpleDataKERIHash.
     #[serde(rename = "previous")]
-    pub previous_o: Option<selfhash::KERIHash>,
+    pub previous_o: Option<mbx::MBHash>,
     pub name: String,
     pub stuff_count: u32,
     pub data_byte_v: Vec<u8>,
     /// Self-hash of this data.
     #[serde(rename = "self_hash")]
-    pub self_hash_o: Option<selfhash::KERIHash>,
+    pub self_hash_o: Option<mbx::MBHash>,
+    // pub compound: String,
 }
 
-impl selfhash::SelfHashable for SimpleDataKERIHash {
-    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) -> selfhash::Result<()> {
+#[cfg(feature = "mbx")]
+impl selfhash::SelfHashableT<mbx::MBHashStr> for SimpleDataMBHash {
+    fn write_digest_data(
+        &self,
+        hasher: &mut <<mbx::MBHashStr as selfhash::HashRefT>::HashFunction as selfhash::HashFunctionT<mbx::MBHashStr>>::Hasher,
+    ) -> selfhash::Result<()> {
         selfhash::write_digest_data_using_jcs(self, hasher)
     }
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
-    ) -> selfhash::Result<Box<dyn std::iter::Iterator<Item = Option<&dyn selfhash::Hash>> + 'a>>
+    ) -> selfhash::Result<Box<dyn std::iter::Iterator<Item = Option<&'b mbx::MBHashStr>> + 'a>>
     {
         Ok(Box::new(std::iter::once(
             self.self_hash_o
                 .as_ref()
-                .map(|s| -> &dyn selfhash::Hash { s }),
+                .map(|s| -> &'b mbx::MBHashStr { s }),
         )))
     }
-    fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) -> selfhash::Result<()> {
-        self.self_hash_o = Some(hash.to_keri_hash()?.into_owned());
+    fn set_self_hash_slots_to(&mut self, hash: &mbx::MBHashStr) -> selfhash::Result<()> {
+        self.self_hash_o = Some(hash.to_owned());
         Ok(())
     }
 }
 
+#[cfg(feature = "mbx")]
 #[test]
 #[serial_test::serial]
-fn test_self_hashable_keri_hash() {
-    for hash_function in hash_functions() {
-        println!("---------------------------------------------------");
-        println!(
-            "test_self_hashable_keri_hash; hash_function KERI prefix: {:?}",
-            hash_function.keri_prefix()
-        );
+fn test_self_hashable_mb_hash() {
+    for base in [
+        mbx::Base::Base16Lower,
+        mbx::Base::Base16Upper,
+        mbx::Base::Base32Lower,
+        mbx::Base::Base32Upper,
+        mbx::Base::Base58Btc,
+        mbx::Base::Base64Url,
+    ] {
+        for codec in [
+            ssi_multicodec::BLAKE3,
+            ssi_multicodec::SHA2_256,
+            ssi_multicodec::SHA2_512,
+        ] {
+            println!("---------------------------------------------------");
+            let hash_function =
+                selfhash::MBHashFunction::new(base, codec).expect("programmer error");
+            println!(
+                "test_self_hashable_mb_hash; {:?}; base: {:?}, codec: {:?} ({:?})",
+                hash_function,
+                base,
+                codec,
+                mbx::codec_str(codec)
+            );
 
-        let mut simple_data_0 = SimpleDataKERIHash {
-            previous_o: None,
-            name: "hippodonkey".to_string(),
-            stuff_count: 42,
-            data_byte_v: vec![0x01, 0x02, 0x03],
-            self_hash_o: None,
-        };
-        // println!("simple_data_0 before self-hash: {:#?}", simple_data_0);
-        println!(
-            "simple_data_0 before self-hash as JCS: {}",
-            std::str::from_utf8(
-                serde_json_canonicalizer::to_vec(&simple_data_0)
-                    .expect("pass")
-                    .as_slice()
-            )
-            .expect("pass")
-        );
-        use selfhash::SelfHashable;
-        simple_data_0
-            .self_hash(hash_function.new_hasher())
-            .expect("pass");
-        println!(
-            "simple_data_0 after self-hash as JCS: {}",
-            std::str::from_utf8(
-                serde_json_canonicalizer::to_vec(&simple_data_0)
-                    .expect("pass")
-                    .as_slice()
-            )
-            .expect("pass")
-        );
-        assert!(simple_data_0.self_hash_o.is_some());
-        simple_data_0.verify_self_hashes().expect("pass");
-        println!("simple_data_0 self self-hash verified!");
-        // Let's make sure that altering the data causes the verification to fail.
-        let mut altered_simple_data_0 = simple_data_0.clone();
-        altered_simple_data_0.name = "maaaaaaaaaa".to_string();
-        assert!(altered_simple_data_0.verify_self_hashes().is_err());
+            let mut simple_data_0 = SimpleDataMBHash {
+                previous_o: None,
+                name: "hippodonkey".to_string(),
+                stuff_count: 42,
+                data_byte_v: vec![0x01, 0x02, 0x03],
+                self_hash_o: None,
+            };
+            // println!("simple_data_0 before self-hash: {:#?}", simple_data_0);
+            println!(
+                "simple_data_0 before self-hash as JCS: {}",
+                std::str::from_utf8(
+                    serde_json_canonicalizer::to_vec(&simple_data_0)
+                        .expect("pass")
+                        .as_slice()
+                )
+                .expect("pass")
+            );
+            use selfhash::{HashFunctionT, SelfHashableT};
+            simple_data_0
+                .self_hash(hash_function.new_hasher())
+                .expect("pass");
+            println!(
+                "simple_data_0 after self-hash as JCS: {}",
+                std::str::from_utf8(
+                    serde_json_canonicalizer::to_vec(&simple_data_0)
+                        .expect("pass")
+                        .as_slice()
+                )
+                .expect("pass")
+            );
+            assert!(simple_data_0.self_hash_o.is_some());
+            simple_data_0.verify_self_hashes().expect("pass");
+            println!("simple_data_0 self self-hash verified!");
+            // Let's make sure that altering the data causes the verification to fail.
+            let mut altered_simple_data_0 = simple_data_0.clone();
+            altered_simple_data_0.name = "maaaaaaaaaa".to_string();
+            assert!(altered_simple_data_0.verify_self_hashes().is_err());
 
-        let mut simple_data_1 = SimpleDataKERIHash {
-            previous_o: simple_data_0.self_hash_o.clone(),
-            name: "grippoponkey".to_string(),
-            stuff_count: 43,
-            data_byte_v: vec![0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80],
-            self_hash_o: None,
-        };
-        assert!(simple_data_1.previous_o.is_some());
-        println!(
-            "simple_data_1 before self-hash as JCS: {}",
-            std::str::from_utf8(
-                serde_json_canonicalizer::to_vec(&simple_data_1)
-                    .expect("pass")
-                    .as_slice()
-            )
-            .expect("pass")
-        );
-        assert!(simple_data_1.previous_o.is_some());
-        simple_data_1
-            .self_hash(hash_function.new_hasher())
-            .expect("pass");
-        assert!(simple_data_1.previous_o.is_some());
-        // println!("simple_data_1 after self-hash: {:#?}", simple_data_1);
-        println!(
-            "simple_data_1 after self-hash as JCS: {}",
-            std::str::from_utf8(
-                serde_json_canonicalizer::to_vec(&simple_data_1)
-                    .expect("pass")
-                    .as_slice()
-            )
-            .expect("pass")
-        );
-        assert!(simple_data_1.self_hash_o.is_some());
-        simple_data_1.verify_self_hashes().expect("pass");
-        println!("simple_data_1 self self-hash verified!");
+            let mut simple_data_1 = SimpleDataMBHash {
+                previous_o: simple_data_0.self_hash_o.clone(),
+                name: "grippoponkey".to_string(),
+                stuff_count: 43,
+                data_byte_v: vec![0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80],
+                self_hash_o: None,
+            };
+            assert!(simple_data_1.previous_o.is_some());
+            println!(
+                "simple_data_1 before self-hash as JCS: {}",
+                std::str::from_utf8(
+                    serde_json_canonicalizer::to_vec(&simple_data_1)
+                        .expect("pass")
+                        .as_slice()
+                )
+                .expect("pass")
+            );
+            assert!(simple_data_1.previous_o.is_some());
+            simple_data_1
+                .self_hash(hash_function.new_hasher())
+                .expect("pass");
+            assert!(simple_data_1.previous_o.is_some());
+            // println!("simple_data_1 after self-hash: {:#?}", simple_data_1);
+            println!(
+                "simple_data_1 after self-hash as JCS: {}",
+                std::str::from_utf8(
+                    serde_json_canonicalizer::to_vec(&simple_data_1)
+                        .expect("pass")
+                        .as_slice()
+                )
+                .expect("pass")
+            );
+            assert!(simple_data_1.self_hash_o.is_some());
+            simple_data_1.verify_self_hashes().expect("pass");
+            println!("simple_data_1 self self-hash verified!");
+        }
     }
 }
 
+//
+// End MBX
+//
+
 // NOTE: This is not fully compliant with the URI spec, but it's good enough for a demonstration.
 // NOTE: This doesn't deal with percent-encoding at all.
-// The KERIHash is the last component of the path.
+// The mbx::MBHash is the last component of the path.
 #[derive(
     Clone, Debug, serde_with::DeserializeFromStr, Eq, serde_with::SerializeDisplay, PartialEq,
 )]
@@ -358,8 +377,8 @@ pub struct URIWithHash {
     // This is the path before the signature, which includes the leading and trailing slash,
     // and therefore might just be equal to "/".
     pub pre_hash_path: String,
-    // Self-hash in KERIHash form, which is renderable as a URL-safe string.
-    pub hash: selfhash::KERIHash,
+    // Self-hash in mbx::MBHash form, which is renderable as a URL-safe string.
+    pub hash: mbx::MBHash,
     pub query_o: Option<String>,
     pub fragment_o: Option<String>,
 }
@@ -385,7 +404,7 @@ impl std::str::FromStr for URIWithHash {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // TODO: Need to check for proper percent-encoding, etc.
-        require!(s.is_ascii(), "URIWithSignature must be ASCII");
+        ensure!(s.is_ascii(), "URIWithSignature must be ASCII");
         // Parse the scheme.
         let (scheme, after_scheme) = s
             .split_once(":")
@@ -413,7 +432,7 @@ impl std::str::FromStr for URIWithHash {
             .find(|c| c == '?' || c == '#')
             .unwrap_or_else(|| hash_and_beyond.len());
         let (hash_str, after_hash) = hash_and_beyond.split_at(hash_end);
-        let hash = selfhash::KERIHash::try_from(hash_str.to_string())?;
+        let hash = mbx::MBHash::try_from(hash_str.to_string())?;
         // Parse query, if present.
         let (query_o, after_query) = if after_hash.starts_with('?') {
             let query_end = after_hash.find('#').unwrap_or_else(|| after_hash.len());
@@ -446,93 +465,48 @@ pub struct FancyData {
     pub stuff: String,
     pub things: Vec<u32>,
     #[serde(rename = "self_hash")]
-    pub self_hash_o: Option<selfhash::KERIHash>,
+    pub self_hash_o: Option<mbx::MBHash>,
 }
 
-impl selfhash::SelfHashable for FancyData {
-    fn write_digest_data(&self, hasher: &mut dyn selfhash::Hasher) -> selfhash::Result<()> {
+impl selfhash::SelfHashableT<mbx::MBHashStr> for FancyData {
+    fn write_digest_data(
+        &self,
+        hasher: &mut <<mbx::MBHashStr as selfhash::HashRefT>::HashFunction as selfhash::HashFunctionT<mbx::MBHashStr>>::Hasher,
+    ) -> selfhash::Result<()> {
         selfhash::write_digest_data_using_jcs(self, hasher)
     }
     fn self_hash_oi<'a, 'b: 'a>(
         &'b self,
-    ) -> selfhash::Result<Box<dyn std::iter::Iterator<Item = Option<&dyn selfhash::Hash>> + 'a>>
+    ) -> selfhash::Result<Box<dyn std::iter::Iterator<Item = Option<&'b mbx::MBHashStr>> + 'a>>
     {
         Ok(Box::new(
-            std::iter::once(Some(&self.uri.hash as &dyn selfhash::Hash)).chain(std::iter::once(
+            std::iter::once(Some(self.uri.hash.as_mb_hash_str())).chain(std::iter::once(
                 self.self_hash_o
                     .as_ref()
-                    .map(|self_hash| self_hash as &dyn selfhash::Hash),
+                    .map(|self_hash| self_hash.as_mb_hash_str()),
             )),
         ))
     }
-    fn set_self_hash_slots_to(&mut self, hash: &dyn selfhash::Hash) -> selfhash::Result<()> {
-        let keri_hash = hash.to_keri_hash()?.into_owned();
-        self.uri.hash = keri_hash.clone();
-        self.self_hash_o = Some(keri_hash);
+    fn set_self_hash_slots_to(&mut self, hash: &mbx::MBHashStr) -> selfhash::Result<()> {
+        let hash = hash.to_owned();
+        self.uri.hash = hash.clone();
+        self.self_hash_o = Some(hash);
         Ok(())
-    }
-}
-
-#[test]
-#[serial_test::serial]
-fn test_multiple_self_hash_slots() {
-    for hash_function in hash_functions() {
-        println!("------------------------------------------------");
-        println!(
-            "test_multiple_self_hash_slots; testing {:?}",
-            hash_function.named_hash_function()
-        );
-        let mut fancy_data = FancyData {
-            uri: URIWithHash {
-                scheme: "https".to_string(),
-                authority_o: Some("example.com".to_string()),
-                pre_hash_path: "/fancy_data/".to_string(),
-                hash: hash_function
-                    .placeholder_hash()
-                    .to_keri_hash()
-                    .expect("pass")
-                    .into_owned(),
-                query_o: None,
-                fragment_o: None,
-            },
-            stuff: "hippopotapotamus".to_string(),
-            things: vec![1, 2, 3, 4, 5],
-            self_hash_o: None,
-        };
-        println!(
-            "fancy_data before self-hash as JCS: {}",
-            std::str::from_utf8(
-                serde_json_canonicalizer::to_vec(&fancy_data)
-                    .expect("pass")
-                    .as_slice()
-            )
-            .expect("pass")
-        );
-        use selfhash::SelfHashable;
-        fancy_data
-            .self_hash(hash_function.new_hasher())
-            .expect("pass");
-        println!(
-            "fancy_data after self-hash as JCS: {}",
-            std::str::from_utf8(
-                serde_json_canonicalizer::to_vec(&fancy_data)
-                    .expect("pass")
-                    .as_slice()
-            )
-            .expect("pass")
-        );
-        fancy_data.verify_self_hashes().expect("pass");
     }
 }
 
 #[cfg(feature = "self-hashable-json")]
 #[test]
 fn test_self_hashable_json_0() {
-    use selfhash::{HashFunction, SelfHashable};
+    use selfhash::{HashFunctionT, SelfHashableT};
     {
         let mut json = serde_json::from_str::<serde_json::Value>(r#"{"thing":3}"#).expect("pass");
         println!("json before self-hashing: {}", json.to_string());
-        json.self_hash(selfhash::Blake3.new_hasher()).expect("pass");
+        // json.self_hash(selfhash::Blake3.new_hasher()).expect("pass");
+        let mb_hash_function =
+            selfhash::MBHashFunction::new(mbx::Base::Base64Url, ssi_multicodec::BLAKE3)
+                .expect("programmer error");
+        json.self_hash(mb_hash_function.new_hasher()).expect("pass");
         println!("json after self-hashing: {}", json.to_string());
         json.verify_self_hashes().expect("pass");
     }
@@ -541,7 +515,7 @@ fn test_self_hashable_json_0() {
 #[cfg(feature = "self-hashable-json")]
 #[test]
 fn test_self_hashable_json_1a() {
-    use selfhash::{HashFunction, SelfHashable, SelfHashableJSON};
+    use selfhash::{HashFunctionT, SelfHashableJSON, SelfHashableT};
     use std::{borrow::Cow, collections::HashSet};
     {
         println!("with self-hash field name override:");
@@ -557,8 +531,11 @@ fn test_self_hashable_json_1a() {
             Cow::Owned(self_hash_url_path_s),
         )
         .expect("pass");
+        let mb_hash_function =
+            selfhash::MBHashFunction::new(mbx::Base::Base64Url, ssi_multicodec::BLAKE3)
+                .expect("programmer error");
         self_hashable_json
-            .self_hash(selfhash::Blake3.new_hasher())
+            .self_hash(mb_hash_function.new_hasher())
             .expect("pass");
         self_hashable_json.verify_self_hashes().expect("pass");
         println!(
@@ -571,7 +548,7 @@ fn test_self_hashable_json_1a() {
 #[cfg(feature = "self-hashable-json")]
 #[test]
 fn test_self_hashable_json_1b() {
-    use selfhash::{HashFunction, SelfHashable, SelfHashableJSON};
+    use selfhash::{HashFunctionT, SelfHashableJSON, SelfHashableT};
     use std::{borrow::Cow, collections::HashSet};
     {
         println!("with self-hash field name override:");
@@ -586,8 +563,11 @@ fn test_self_hashable_json_1b() {
             Cow::Owned(self_hash_url_path_s),
         )
         .expect("pass");
+        let mb_hash_function =
+            selfhash::MBHashFunction::new(mbx::Base::Base64Url, ssi_multicodec::BLAKE3)
+                .expect("programmer error");
         self_hashable_json
-            .self_hash(selfhash::Blake3.new_hasher())
+            .self_hash(mb_hash_function.new_hasher())
             .expect("pass");
         self_hashable_json.verify_self_hashes().expect("pass");
         println!(
@@ -600,7 +580,7 @@ fn test_self_hashable_json_1b() {
 #[cfg(feature = "self-hashable-json")]
 #[test]
 fn test_self_hashable_json_1c() {
-    use selfhash::{HashFunction, SelfHashable, SelfHashableJSON};
+    use selfhash::{HashFunctionT, SelfHashableJSON, SelfHashableT};
     use std::{borrow::Cow, collections::HashSet};
     {
         println!("with self-hash field name override:");
@@ -616,8 +596,11 @@ fn test_self_hashable_json_1c() {
             Cow::Owned(self_hash_url_path_s),
         )
         .expect("pass");
+        let mb_hash_function =
+            selfhash::MBHashFunction::new(mbx::Base::Base64Url, ssi_multicodec::BLAKE3)
+                .expect("programmer error");
         self_hashable_json
-            .self_hash(selfhash::Blake3.new_hasher())
+            .self_hash(mb_hash_function.new_hasher())
             .expect("pass");
         self_hashable_json.verify_self_hashes().expect("pass");
         println!(
@@ -630,7 +613,7 @@ fn test_self_hashable_json_1c() {
 #[cfg(feature = "self-hashable-json")]
 #[test]
 fn test_self_hashable_json_1d() {
-    use selfhash::{HashFunction, SelfHashable, SelfHashableJSON};
+    use selfhash::{HashFunctionT, SelfHashableJSON, SelfHashableT};
     use std::{borrow::Cow, collections::HashSet};
     {
         println!("with self-hash field name override:");
@@ -645,49 +628,16 @@ fn test_self_hashable_json_1d() {
             Cow::Owned(self_hash_url_path_s),
         )
         .expect("pass");
+        let mb_hash_function =
+            selfhash::MBHashFunction::new(mbx::Base::Base64Url, ssi_multicodec::BLAKE3)
+                .expect("programmer error");
         self_hashable_json
-            .self_hash(selfhash::Blake3.new_hasher())
+            .self_hash(mb_hash_function.new_hasher())
             .expect("pass");
         self_hashable_json.verify_self_hashes().expect("pass");
         println!(
             "json after self-hashing: {}",
             self_hashable_json.value().to_string()
         );
-    }
-}
-
-#[test]
-fn test_keri_hash_traits() {
-    use selfhash::KERIHash;
-    use std::collections::{BTreeMap, HashMap};
-
-    // Verify that KERIHash implements the traits we expect it to.
-
-    // Ord
-    {
-        let mut m = BTreeMap::<KERIHash, String>::new();
-        m.insert(
-            KERIHash::try_from("EjXivDidxAi2kETdFw1o36-jZUkYkxg0ayMhSBjODAgQ").expect("pass"),
-            "hippo".to_string(),
-        );
-        m.insert(
-            KERIHash::try_from("EgqvDOcj4HItWDVij-yHj0GtBPnEofatHT2xuoVD7tMY").expect("pass"),
-            "ostrich".to_string(),
-        );
-        println!("btreemap: {:#?}", m);
-    }
-
-    // Hash
-    {
-        let mut m = HashMap::<KERIHash, String>::new();
-        m.insert(
-            KERIHash::try_from("EjXivDidxAi2kETdFw1o36-jZUkYkxg0ayMhSBjODAgQ").expect("pass"),
-            "hippo".to_string(),
-        );
-        m.insert(
-            KERIHash::try_from("EgqvDOcj4HItWDVij-yHj0GtBPnEofatHT2xuoVD7tMY").expect("pass"),
-            "ostrich".to_string(),
-        );
-        println!("hashmap: {:#?}", m);
     }
 }

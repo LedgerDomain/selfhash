@@ -2,6 +2,31 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "check workspace",
+			"type": "shell",
+			"command": "cargo",
+			"args": [
+				"check",
+				"--workspace",
+				"--all-features",
+				"--benches",
+				"--bins",
+				"--tests",
+				"--examples"
+			],
+			"presentation": {
+				"clear": true,
+				"revealProblems": "onProblem"
+			},
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
 			"label": "check selfhash",
 			"type": "shell",
 			"command": "cargo",
@@ -38,10 +63,7 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
+			"group": "build"
 		},
 		{
 			"label": "build selfhash-bin",

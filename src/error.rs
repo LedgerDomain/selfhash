@@ -16,6 +16,15 @@ impl std::ops::Deref for Error {
     }
 }
 
+impl std::error::Error for Error {}
+
+#[cfg(feature = "mbx")]
+impl From<mbx::Error> for Error {
+    fn from(e: mbx::Error) -> Self {
+        Self(Cow::Owned(e.to_string()))
+    }
+}
+
 #[cfg(feature = "self-hashable-json")]
 impl From<jsonpath_lib::JsonPathError> for Error {
     fn from(e: jsonpath_lib::JsonPathError) -> Self {
@@ -72,7 +81,7 @@ macro_rules! bail {
 
 /// This will return with the formatted error if the condition is not met.
 #[macro_export]
-macro_rules! require {
+macro_rules! ensure {
     ($condition: expr, $msg: literal) => {
         if !$condition {
             return Err($crate::Error::from($msg));
