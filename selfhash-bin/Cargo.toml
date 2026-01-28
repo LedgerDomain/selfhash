@@ -1,14 +1,18 @@
 [package]
 name = "selfhash-bin"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Victor Dods <victor.dods@gmail.com>"]
 edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.17", features = ["derive"] }
 maplit = "1.0.2"
-mbx = "0.1.0"
-selfhash = { path = "..", features = ["blake3", "mbx", "self-hashable-json"] }
+mbx = "0.1.1"
+selfhash = { path = "..", features = [
+    "all-hash-functions",
+    "mbx",
+    "self-hashable-json",
+] }
 serde_json = "1.0.106"
 serde_json_canonicalizer = "0.2.0"
 

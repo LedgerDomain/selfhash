@@ -18,7 +18,20 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
                 panic!("programmer error: blake3 feature not enabled");
             }
         }
-        selfhash::NamedHashFunction::SHA_256 => {
+        selfhash::NamedHashFunction::SHA224 => {
+            #[cfg(feature = "sha-224")]
+            {
+                let hash = selfhash::SHA224Hash::from(selfhash::SHA224HashInner::clone_from_slice(
+                    hash_bytes.bytes(),
+                ));
+                Box::new(hash)
+            }
+            #[cfg(not(feature = "sha-224"))]
+            {
+                panic!("programmer error: sha-224 feature not enabled");
+            }
+        }
+        selfhash::NamedHashFunction::SHA256 => {
             #[cfg(feature = "sha-256")]
             {
                 let hash = selfhash::SHA256Hash::from(selfhash::SHA256HashInner::clone_from_slice(
@@ -31,7 +44,20 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
                 panic!("programmer error: sha-256 feature not enabled");
             }
         }
-        selfhash::NamedHashFunction::SHA_512 => {
+        selfhash::NamedHashFunction::SHA384 => {
+            #[cfg(feature = "sha-384")]
+            {
+                let hash = selfhash::SHA384Hash::from(selfhash::SHA384HashInner::clone_from_slice(
+                    hash_bytes.bytes(),
+                ));
+                Box::new(hash)
+            }
+            #[cfg(not(feature = "sha-384"))]
+            {
+                panic!("programmer error: sha-384 feature not enabled");
+            }
+        }
+        selfhash::NamedHashFunction::SHA512 => {
             #[cfg(feature = "sha-512")]
             {
                 let hash = selfhash::SHA512Hash::from(selfhash::SHA512HashInner::clone_from_slice(
@@ -42,6 +68,45 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
             #[cfg(not(feature = "sha-512"))]
             {
                 panic!("programmer error: sha-512 feature not enabled");
+            }
+        }
+        selfhash::NamedHashFunction::SHA3_256 => {
+            #[cfg(feature = "sha3-256")]
+            {
+                let hash = selfhash::SHA3_256_Hash::from(
+                    selfhash::SHA3_256_HashInner::clone_from_slice(hash_bytes.bytes()),
+                );
+                Box::new(hash)
+            }
+            #[cfg(not(feature = "sha3-256"))]
+            {
+                panic!("programmer error: sha3-256 feature not enabled");
+            }
+        }
+        selfhash::NamedHashFunction::SHA3_384 => {
+            #[cfg(feature = "sha3-384")]
+            {
+                let hash = selfhash::SHA3_384_Hash::from(
+                    selfhash::SHA3_384_HashInner::clone_from_slice(hash_bytes.bytes()),
+                );
+                Box::new(hash)
+            }
+            #[cfg(not(feature = "sha3-384"))]
+            {
+                panic!("programmer error: sha3-384 feature not enabled");
+            }
+        }
+        selfhash::NamedHashFunction::SHA3_512 => {
+            #[cfg(feature = "sha3-512")]
+            {
+                let hash = selfhash::SHA3_512_Hash::from(
+                    selfhash::SHA3_512_HashInner::clone_from_slice(hash_bytes.bytes()),
+                );
+                Box::new(hash)
+            }
+            #[cfg(not(feature = "sha3-512"))]
+            {
+                panic!("programmer error: sha3-512 feature not enabled");
             }
         }
         _ => {
@@ -203,13 +268,13 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
 // #[test]
 // #[serial_test::serial]
 // fn test_self_hashable_simple_data_hash_sha256() {
-//     test_self_hashable_simple_data_hash_case(selfhash::SHA256);
+//     test_self_hashable_simple_data_hash_case(selfhash::SHA_256);
 // }
 
 // #[test]
 // #[serial_test::serial]
 // fn test_self_hashable_simple_data_hash_sha512() {
-//     test_self_hashable_simple_data_hash_case(selfhash::SHA512);
+//     test_self_hashable_simple_data_hash_case(selfhash::SHA_512);
 // }
 
 //
@@ -220,7 +285,7 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
 #[cfg(feature = "mbx")]
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct SimpleDataMBHash {
-    /// Self-hash of the previous SimpleDataKERIHash.
+    /// Self-hash of the previous SimpleDataMBHash.
     #[serde(rename = "previous")]
     pub previous_o: Option<mbx::MBHash>,
     pub name: String,
@@ -259,6 +324,43 @@ impl selfhash::SelfHashableT<mbx::MBHashStr> for SimpleDataMBHash {
 #[cfg(feature = "mbx")]
 #[test]
 #[serial_test::serial]
+fn test_mb_hash_placeholder() {
+    for base in [
+        mbx::Base::Base16Lower,
+        mbx::Base::Base16Upper,
+        mbx::Base::Base32Lower,
+        mbx::Base::Base32Upper,
+        mbx::Base::Base58Btc,
+        mbx::Base::Base64Url,
+    ] {
+        for codec in [
+            ssi_multicodec::BLAKE3,
+            ssi_multicodec::SHA2_224,
+            ssi_multicodec::SHA2_256,
+            ssi_multicodec::SHA2_384,
+            ssi_multicodec::SHA2_512,
+            ssi_multicodec::SHA3_224,
+            ssi_multicodec::SHA3_256,
+            ssi_multicodec::SHA3_384,
+            ssi_multicodec::SHA3_512,
+        ] {
+            let hash_function =
+                selfhash::MBHashFunction::new(base, codec).expect("programmer error");
+            use selfhash::HashFunctionT;
+            println!(
+                "base: {:?}, codec: {:?} ({:?}), placeholder hash: {:?}",
+                base,
+                codec,
+                mbx::codec_str(codec).unwrap(),
+                hash_function.placeholder_hash()
+            );
+        }
+    }
+}
+
+#[cfg(feature = "mbx")]
+#[test]
+#[serial_test::serial]
 fn test_self_hashable_mb_hash() {
     for base in [
         mbx::Base::Base16Lower,
@@ -270,8 +372,13 @@ fn test_self_hashable_mb_hash() {
     ] {
         for codec in [
             ssi_multicodec::BLAKE3,
+            ssi_multicodec::SHA2_224,
             ssi_multicodec::SHA2_256,
+            ssi_multicodec::SHA2_384,
             ssi_multicodec::SHA2_512,
+            ssi_multicodec::SHA3_256,
+            ssi_multicodec::SHA3_384,
+            ssi_multicodec::SHA3_512,
         ] {
             println!("---------------------------------------------------");
             let hash_function =

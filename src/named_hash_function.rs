@@ -20,23 +20,55 @@ use crate::{bail, Error, HashFunctionT};
 pub struct NamedHashFunction(&'static str);
 
 const BLAKE3_STR: &'static str = "BLAKE3";
+/// SHA-224 (part of the SHA2 family).
+const SHA_224_STR: &'static str = "SHA-224";
+/// SHA-256 (part of the SHA2 family).
 const SHA_256_STR: &'static str = "SHA-256";
+/// SHA-384 (part of the SHA2 family).
+const SHA_384_STR: &'static str = "SHA-384";
+/// SHA-512 (part of the SHA2 family).
 const SHA_512_STR: &'static str = "SHA-512";
+/// SHA3-224 (part of the SHA3 family).
+const SHA3_224_STR: &'static str = "SHA3-224";
+/// SHA3-256 (part of the SHA3 family).
+const SHA3_256_STR: &'static str = "SHA3-256";
+/// SHA3-384 (part of the SHA3 family).
+const SHA3_384_STR: &'static str = "SHA3-384";
+/// SHA3-512 (part of the SHA3 family).
+const SHA3_512_STR: &'static str = "SHA3-512";
 
 impl NamedHashFunction {
     /// See https://github.com/BLAKE3-team/BLAKE3
     pub const BLAKE3: NamedHashFunction = NamedHashFunction(BLAKE3_STR);
     /// See https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
-    pub const SHA_256: NamedHashFunction = NamedHashFunction(SHA_256_STR);
+    pub const SHA224: NamedHashFunction = NamedHashFunction(SHA_224_STR);
     /// See https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
-    pub const SHA_512: NamedHashFunction = NamedHashFunction(SHA_512_STR);
+    pub const SHA256: NamedHashFunction = NamedHashFunction(SHA_256_STR);
+    /// See https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+    pub const SHA384: NamedHashFunction = NamedHashFunction(SHA_384_STR);
+    /// See https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+    pub const SHA512: NamedHashFunction = NamedHashFunction(SHA_512_STR);
+    /// See https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf
+    pub const SHA3_224: NamedHashFunction = NamedHashFunction(SHA3_224_STR);
+    /// See https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf
+    pub const SHA3_256: NamedHashFunction = NamedHashFunction(SHA3_256_STR);
+    /// See https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf
+    pub const SHA3_384: NamedHashFunction = NamedHashFunction(SHA3_384_STR);
+    /// See https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf
+    pub const SHA3_512: NamedHashFunction = NamedHashFunction(SHA3_512_STR);
 
     #[cfg(feature = "mbx")]
     pub fn as_mb_hash_function(&self, base: mbx::Base) -> crate::MBHashFunction {
         match self.0 {
             BLAKE3_STR => crate::MBHashFunction::blake3(base),
-            SHA_256_STR => crate::MBHashFunction::sha2_256(base),
-            SHA_512_STR => crate::MBHashFunction::sha2_512(base),
+            SHA_224_STR => crate::MBHashFunction::sha224(base),
+            SHA_256_STR => crate::MBHashFunction::sha256(base),
+            SHA_384_STR => crate::MBHashFunction::sha384(base),
+            SHA_512_STR => crate::MBHashFunction::sha512(base),
+            SHA3_224_STR => crate::MBHashFunction::sha3_224(base),
+            SHA3_256_STR => crate::MBHashFunction::sha3_256(base),
+            SHA3_384_STR => crate::MBHashFunction::sha3_384(base),
+            SHA3_512_STR => crate::MBHashFunction::sha3_512(base),
             _ => {
                 panic!("programmer error: unrecognized hash function name");
             }
@@ -45,8 +77,14 @@ impl NamedHashFunction {
     pub fn placeholder_bytes(&self) -> &'static [u8] {
         match self.0 {
             BLAKE3_STR => &[0u8; 32],
+            SHA_224_STR => &[0u8; 28],
             SHA_256_STR => &[0u8; 32],
+            SHA_384_STR => &[0u8; 48],
             SHA_512_STR => &[0u8; 64],
+            SHA3_224_STR => &[0u8; 28],
+            SHA3_256_STR => &[0u8; 32],
+            SHA3_384_STR => &[0u8; 48],
+            SHA3_512_STR => &[0u8; 64],
             _ => {
                 panic!("programmer error: unrecognized hash function name");
             }
@@ -59,8 +97,14 @@ impl std::str::FromStr for NamedHashFunction {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             BLAKE3_STR => Ok(NamedHashFunction::BLAKE3),
-            SHA_256_STR => Ok(NamedHashFunction::SHA_256),
-            SHA_512_STR => Ok(NamedHashFunction::SHA_512),
+            SHA_224_STR => Ok(NamedHashFunction::SHA224),
+            SHA_256_STR => Ok(NamedHashFunction::SHA256),
+            SHA_384_STR => Ok(NamedHashFunction::SHA384),
+            SHA_512_STR => Ok(NamedHashFunction::SHA512),
+            SHA3_224_STR => Ok(NamedHashFunction::SHA3_224),
+            SHA3_256_STR => Ok(NamedHashFunction::SHA3_256),
+            SHA3_384_STR => Ok(NamedHashFunction::SHA3_384),
+            SHA3_512_STR => Ok(NamedHashFunction::SHA3_512),
             _ => bail!("unrecognized hash function name {:?}", s),
         }
     }
@@ -89,8 +133,8 @@ impl HashFunctionT<mbx::MBHashStr> for NamedHashFunction {
 //     fn new_hasher(&self) -> Self::Hasher {
 //         let hasher_b: Box<dyn HasherDynT> = match *self {
 //             NamedHashFunction::BLAKE3 => Box::new(crate::Blake3.new_hasher()),
-//             NamedHashFunction::SHA_256 => Box::new(crate::SHA256.new_hasher()),
-//             NamedHashFunction::SHA_512 => Box::new(crate::SHA512.new_hasher()),
+//             NamedHashFunction::SHA_256 => Box::new(crate::SHA_256.new_hasher()),
+//             NamedHashFunction::SHA_512 => Box::new(crate::SHA_512.new_hasher()),
 //             _ => {
 //                 panic!("programmer error: unrecognized hash function name");
 //             }

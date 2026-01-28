@@ -21,10 +21,7 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
+			"group": "build"
 		},
 		{
 			"label": "check selfhash",
@@ -63,7 +60,10 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"group": "build"
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
 		},
 		{
 			"label": "build selfhash-bin",

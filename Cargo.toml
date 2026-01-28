@@ -1,10 +1,23 @@
 [package]
 name = "selfhash"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Victor Dods <victor.dods@gmail.com>"]
 edition = "2021"
 
 [features]
+# This feature is a convenience feature that enables support for all hash functions without
+# having to explicitly list each.  This makes it much easier for downstream crates.
+all-hash-functions = [
+    "blake3",
+    "sha-224",
+    "sha-256",
+    "sha-384",
+    "sha-512",
+    "sha3-224",
+    "sha3-256",
+    "sha3-384",
+    "sha3-512",
+]
 # This enables support for the BLAKE3 hash function via the blake3 crate.
 blake3 = ["dep:blake3"]
 # This provides the default implementation of the SelfHashable::write_digest_data method for when a
@@ -14,12 +27,24 @@ jcs = ["dep:serde", "dep:serde_json_canonicalizer"]
 mbx = ["dep:mbx", "dep:ssi-multicodec"]
 # This enables support for self-hashable serde_json::Value-s.
 self-hashable-json = ["jcs", "dep:jsonpath_lib", "dep:serde_json"]
-# This enables serde support for for KERIHash and NamedHashFunction types.
+# This enables serde support for for MBHash and NamedHashFunction types.
 serde = ["dep:serde", "dep:serde_with"]
-# This enables support for the SHA-256 hash function via the sha2 crate.
+# This enables support for the SHA-224 hash function (from the SHA2 family) via the sha2 crate.
+sha-224 = ["dep:digest", "dep:lazy_static", "dep:sha2"]
+# This enables support for the SHA-256 hash function (from the SHA2 family) via the sha2 crate.
 sha-256 = ["dep:digest", "dep:lazy_static", "dep:sha2"]
-# This enables support for the SHA-512 hash function via the sha2 crate.
+# This enables support for the SHA-384 hash function (from the SHA2 family) via the sha2 crate.
+sha-384 = ["dep:digest", "dep:lazy_static", "dep:sha2"]
+# This enables support for the SHA-512 hash function (from the SHA2 family) via the sha2 crate.
 sha-512 = ["dep:digest", "dep:lazy_static", "dep:sha2"]
+# This enables support for the SHA3-224 hash function via the sha3 crate.
+sha3-224 = ["dep:digest", "dep:lazy_static", "dep:sha3"]
+# This enables support for the SHA3-256 hash function via the sha3 crate.
+sha3-256 = ["dep:digest", "dep:lazy_static", "dep:sha3"]
+# This enables support for the SHA3-384 hash function via the sha3 crate.
+sha3-384 = ["dep:digest", "dep:lazy_static", "dep:sha3"]
+# This enables support for the SHA3-512 hash function via the sha3 crate.
+sha3-512 = ["dep:digest", "dep:lazy_static", "dep:sha3"]
 
 [dependencies]
 base64 = { version = "0.21.4", default-features = false }
@@ -35,7 +60,7 @@ derive_more = { version = "0.99.17", default-features = false, features = [
 digest = { version = "0.10.7", optional = true }
 jsonpath_lib = { version = "0.3.0", optional = true }
 lazy_static = { version = "1.4", optional = true, default-features = false }
-mbx = { version = "0.1.0", optional = true, features = ["serde"] }
+mbx = { version = "0.1.1", optional = true, features = ["serde"] }
 pneutype = "0.5.1"
 serde = { version = "1.0", optional = true, default-features = false, features = [
     "alloc",
@@ -46,9 +71,8 @@ serde_json_canonicalizer = { version = "0.2.0", optional = true }
 serde_with = { version = "3.3.0", optional = true, default-features = false, features = [
     "macros",
 ] }
-sha2 = { version = "0.10.7", optional = true, default-features = false, features = [
-    "std",
-] }
+sha2 = { version = "0.10.9", optional = true }
+sha3 = { version = "0.10.8", optional = true }
 ssi-multicodec = { version = "0.2.0", optional = true }
 
 [dev-dependencies]
@@ -63,7 +87,7 @@ serde_with = { version = "3.3.0", default-features = false, features = [
 serial_test = "2.0.0"
 
 [patch.crates-io]
-mbx = { git = "https://github.com/LedgerDomain/mbx", rev = "mbx-v0.1.0" }
+mbx = { git = "https://github.com/LedgerDomain/mbx", rev = "mbx-v0.1.1" }
 pneutype = { git = "https://github.com/vdods/pneutype", rev = "pneutype-v0.5.1" }
 
 [workspace]

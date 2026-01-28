@@ -4,15 +4,15 @@ use crate::HasherDynT;
 
 #[cfg(feature = "sha-512")]
 lazy_static::lazy_static! {
-    static ref SHA_512_PLACEHOLDER: SHA512Hash = SHA512Hash::from(SHA512HashInner::default());
+    static ref SHA512_PLACEHOLDER: SHA512Hash = SHA512Hash::from(SHA512HashInner::default());
 }
 
 //
 // SHA512
 //
 
-/// This represents the SHA_512 hash function itself.  Note that this is distinct from a
-/// SHA_512 hasher or a SHA_512_Hash value.
+/// This represents the SHA-512 hash function itself (from the SHA2 family of hash functions).
+/// Note that this is distinct from a sha2::Sha512 hasher or a SHA512Hash value.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SHA512;
 
@@ -35,7 +35,7 @@ impl crate::HashFunctionT<SHA512Hash> for SHA512 {
     fn placeholder_hash(&self) -> std::borrow::Cow<'static, SHA512Hash> {
         #[cfg(feature = "sha-512")]
         {
-            std::borrow::Cow::Borrowed(&*SHA_512_PLACEHOLDER)
+            std::borrow::Cow::Borrowed(&*SHA512_PLACEHOLDER)
         }
         #[cfg(not(feature = "sha-512"))]
         {
@@ -54,57 +54,9 @@ impl crate::HashFunctionT<SHA512Hash> for SHA512 {
     }
 }
 
-// impl HashFunction for SHA512 {
-//     fn named_hash_function(&self) -> NamedHashFunction {
-//         NamedHashFunction::SHA_512
-//     }
-//     fn keri_prefix(&self) -> &'static str {
-//         "0G"
-//     }
-//     fn placeholder_hash(&self) -> &'static dyn Hash {
-//         #[cfg(feature = "sha-512")]
-//         {
-//             &*SHA_512_PLACEHOLDER
-//         }
-//         #[cfg(not(feature = "sha-512"))]
-//         {
-//             panic!("programmer error: sha-512 feature not enabled");
-//         }
-//     }
-//     fn new_hasher(&self) -> Box<dyn Hasher> {
-//         #[cfg(feature = "sha-512")]
-//         {
-//             Box::new(sha2::Sha512::default())
-//         }
-//         #[cfg(not(feature = "sha-512"))]
-//         {
-//             panic!("programmer error: sha-512 feature not enabled");
-//         }
-//     }
-// }
-
 //
 // sha2::Sha512
 //
-
-// #[cfg(feature = "sha-512")]
-// impl Hasher for sha2::Sha512 {
-//     fn as_any(&self) -> &dyn std::any::Any {
-//         self
-//     }
-//     fn into_any(self: Box<Self>) -> Box<dyn std::any::Any> {
-//         self
-//     }
-//     fn hash_function(&self) -> &dyn HashFunction {
-//         &SHA512
-//     }
-//     fn update(&mut self, byte_v: &[u8]) {
-//         sha2::Digest::update(self, byte_v);
-//     }
-//     fn finalize(self: Box<Self>) -> Box<dyn Hash> {
-//         Box::new(SHA512Hash::from(sha2::Digest::finalize(*self)))
-//     }
-// }
 
 #[cfg(feature = "sha-512")]
 impl crate::HasherT for sha2::Sha512 {
@@ -135,6 +87,7 @@ impl HasherDynT for sha2::Sha512 {
 //
 
 #[cfg(feature = "sha-512")]
+#[allow(non_camel_case_types)]
 pub type SHA512HashInner =
     digest::generic_array::GenericArray<u8, <sha2::Sha512 as digest::OutputSizeUser>::OutputSize>;
 
@@ -146,6 +99,7 @@ pub type SHA512HashInner =
 /// and that doesn't give semantic distinction over other hash values that may have the same size
 /// but mean a different thing.
 #[cfg(feature = "sha-512")]
+#[allow(non_camel_case_types)]
 #[derive(Clone, Debug, derive_more::Deref, derive_more::From, Eq, derive_more::Into, PartialEq)]
 pub struct SHA512Hash(SHA512HashInner);
 

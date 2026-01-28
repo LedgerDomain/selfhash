@@ -4,15 +4,15 @@ use crate::HasherDynT;
 
 #[cfg(feature = "sha-256")]
 lazy_static::lazy_static! {
-    static ref SHA_256_PLACEHOLDER: SHA256Hash = SHA256Hash::from(SHA256HashInner::default());
+    static ref SHA256_PLACEHOLDER: SHA256Hash = SHA256Hash::from(SHA256HashInner::default());
 }
 
 //
 // SHA256
 //
 
-/// This represents the SHA_256 hash function itself (from the SHA2 family of hash functions).
-/// Note that this is distinct from a SHA_256 hasher or a SHA_256_Hash value.
+/// This represents the SHA-256 hash function itself (from the SHA2 family of hash functions).
+/// Note that this is distinct from a sha2::Sha256 hasher or a SHA256Hash value.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SHA256;
 
@@ -35,7 +35,7 @@ impl crate::HashFunctionT<SHA256Hash> for SHA256 {
     fn placeholder_hash(&self) -> std::borrow::Cow<'static, SHA256Hash> {
         #[cfg(feature = "sha-256")]
         {
-            std::borrow::Cow::Borrowed(&*SHA_256_PLACEHOLDER)
+            std::borrow::Cow::Borrowed(&*SHA256_PLACEHOLDER)
         }
         #[cfg(not(feature = "sha-256"))]
         {
@@ -87,6 +87,7 @@ impl HasherDynT for sha2::Sha256 {
 //
 
 #[cfg(feature = "sha-256")]
+#[allow(non_camel_case_types)]
 pub type SHA256HashInner =
     digest::generic_array::GenericArray<u8, <sha2::Sha256 as digest::OutputSizeUser>::OutputSize>;
 
@@ -98,6 +99,7 @@ pub type SHA256HashInner =
 /// and that doesn't give semantic distinction over other hash values that may have the same size
 /// but mean a different thing.
 #[cfg(feature = "sha-256")]
+#[allow(non_camel_case_types)]
 #[derive(Clone, Debug, derive_more::Deref, derive_more::From, Eq, derive_more::Into, PartialEq)]
 pub struct SHA256Hash(pub(crate) SHA256HashInner);
 
