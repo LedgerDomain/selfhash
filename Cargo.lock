@@ -590,8 +590,8 @@ checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "mbx"
-version = "0.2.2"
-source = "git+https://github.com/LedgerDomain/mbx?rev=mbx-v0.2.2#17daf1ea999ea12a934eba8e6ba214b5fba11d39"
+version = "0.2.3"
+source = "git+https://github.com/LedgerDomain/mbx?rev=mbx-v0.2.3#396772df40a8bab71a59a98e6bbb70fba9689101"
 dependencies = [
  "multibase",
  "multihash",
