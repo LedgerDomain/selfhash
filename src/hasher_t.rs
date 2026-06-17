@@ -1,7 +1,7 @@
 use crate::HashRefT;
 
 /// Represents a hasher object, which is what digests a message and produces a hash value.
-pub trait HasherT: std::io::Write {
+pub trait HasherT: digest::Update {
     type HashRef: HashRefT + ?Sized;
     /// Returns the HashFunction corresponding to this hasher.
     fn hash_function(&self) -> <Self::HashRef as HashRefT>::HashFunction;

@@ -21,9 +21,10 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
         selfhash::NamedHashFunction::SHA224 => {
             #[cfg(feature = "sha-224")]
             {
-                let hash = selfhash::SHA224Hash::from(selfhash::SHA224HashInner::clone_from_slice(
-                    hash_bytes.bytes(),
-                ));
+                let hash = selfhash::SHA224Hash::from(
+                    selfhash::SHA224HashInner::try_from(hash_bytes.bytes())
+                        .expect("programmer error"),
+                );
                 Box::new(hash)
             }
             #[cfg(not(feature = "sha-224"))]
@@ -34,9 +35,10 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
         selfhash::NamedHashFunction::SHA256 => {
             #[cfg(feature = "sha-256")]
             {
-                let hash = selfhash::SHA256Hash::from(selfhash::SHA256HashInner::clone_from_slice(
-                    hash_bytes.bytes(),
-                ));
+                let hash = selfhash::SHA256Hash::from(
+                    selfhash::SHA256HashInner::try_from(hash_bytes.bytes())
+                        .expect("programmer error"),
+                );
                 Box::new(hash)
             }
             #[cfg(not(feature = "sha-256"))]
@@ -47,9 +49,10 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
         selfhash::NamedHashFunction::SHA384 => {
             #[cfg(feature = "sha-384")]
             {
-                let hash = selfhash::SHA384Hash::from(selfhash::SHA384HashInner::clone_from_slice(
-                    hash_bytes.bytes(),
-                ));
+                let hash = selfhash::SHA384Hash::from(
+                    selfhash::SHA384HashInner::try_from(hash_bytes.bytes())
+                        .expect("programmer error"),
+                );
                 Box::new(hash)
             }
             #[cfg(not(feature = "sha-384"))]
@@ -60,9 +63,10 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
         selfhash::NamedHashFunction::SHA512 => {
             #[cfg(feature = "sha-512")]
             {
-                let hash = selfhash::SHA512Hash::from(selfhash::SHA512HashInner::clone_from_slice(
-                    hash_bytes.bytes(),
-                ));
+                let hash = selfhash::SHA512Hash::from(
+                    selfhash::SHA512HashInner::try_from(hash_bytes.bytes())
+                        .expect("programmer error"),
+                );
                 Box::new(hash)
             }
             #[cfg(not(feature = "sha-512"))]
@@ -74,7 +78,8 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
             #[cfg(feature = "sha3-256")]
             {
                 let hash = selfhash::SHA3_256_Hash::from(
-                    selfhash::SHA3_256_HashInner::clone_from_slice(hash_bytes.bytes()),
+                    selfhash::SHA3_256_HashInner::try_from(hash_bytes.bytes())
+                        .expect("programmer error"),
                 );
                 Box::new(hash)
             }
@@ -87,7 +92,8 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
             #[cfg(feature = "sha3-384")]
             {
                 let hash = selfhash::SHA3_384_Hash::from(
-                    selfhash::SHA3_384_HashInner::clone_from_slice(hash_bytes.bytes()),
+                    selfhash::SHA3_384_HashInner::try_from(hash_bytes.bytes())
+                        .expect("programmer error"),
                 );
                 Box::new(hash)
             }
@@ -100,7 +106,8 @@ pub fn hash_from_hash_bytes(hash_bytes: selfhash::HashBytes<'_>) -> Box<dyn self
             #[cfg(feature = "sha3-512")]
             {
                 let hash = selfhash::SHA3_512_Hash::from(
-                    selfhash::SHA3_512_HashInner::clone_from_slice(hash_bytes.bytes()),
+                    selfhash::SHA3_512_HashInner::try_from(hash_bytes.bytes())
+                        .expect("programmer error"),
                 );
                 Box::new(hash)
             }

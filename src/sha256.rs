@@ -88,8 +88,7 @@ impl HasherDynT for sha2::Sha256 {
 
 #[cfg(feature = "sha-256")]
 #[allow(non_camel_case_types)]
-pub type SHA256HashInner =
-    digest::generic_array::GenericArray<u8, <sha2::Sha256 as digest::OutputSizeUser>::OutputSize>;
+pub type SHA256HashInner = hybrid_array::ArrayN<u8, 32>;
 
 //
 // SHA256Hash

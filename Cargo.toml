@@ -1,6 +1,6 @@
 [package]
 name = "selfhash"
-version = "0.5.1"
+version = "0.6.0"
 authors = ["Victor Dods <victor.dods@gmail.com>"]
 edition = "2021"
 
@@ -19,24 +19,29 @@ all-hash-functions = [
     "sha3-512",
 ]
 # This enables support for the BLAKE3 hash function via the blake3 crate.
-blake3 = ["dep:blake3"]
+blake3 = ["dep:blake3", "dep:digest"]
 # This provides the default implementation of the SelfHashable::write_digest_data method for when a
 # SelfHashable implements Clone and the desired serialization format is JSON Canonicalization Scheme (JCS).
-jcs = ["dep:serde", "dep:serde_json_canonicalizer"]
+jcs = ["dep:digest-io", "dep:serde", "dep:serde_json_canonicalizer"]
 # This enables support for the hash types in the `mbx` crate.
 mbx = ["dep:mbx", "dep:ssi-multicodec"]
 # This enables support for self-hashable serde_json::Value-s.
-self-hashable-json = ["jcs", "dep:jsonpath_lib", "dep:serde_json"]
+self-hashable-json = [
+    "dep:digest-io",
+    "jcs",
+    "dep:jsonpath_lib",
+    "dep:serde_json",
+]
 # This enables serde support for for MBHash and NamedHashFunction types.
 serde = ["dep:serde", "dep:serde_with"]
 # This enables support for the SHA-224 hash function (from the SHA2 family) via the sha2 crate.
-sha-224 = ["dep:digest", "dep:lazy_static", "dep:sha2"]
+sha-224 = ["dep:digest", "dep:hybrid-array", "dep:lazy_static", "dep:sha2"]
 # This enables support for the SHA-256 hash function (from the SHA2 family) via the sha2 crate.
-sha-256 = ["dep:digest", "dep:lazy_static", "dep:sha2"]
+sha-256 = ["dep:digest", "dep:hybrid-array", "dep:lazy_static", "dep:sha2"]
 # This enables support for the SHA-384 hash function (from the SHA2 family) via the sha2 crate.
-sha-384 = ["dep:digest", "dep:lazy_static", "dep:sha2"]
+sha-384 = ["dep:digest", "dep:hybrid-array", "dep:lazy_static", "dep:sha2"]
 # This enables support for the SHA-512 hash function (from the SHA2 family) via the sha2 crate.
-sha-512 = ["dep:digest", "dep:lazy_static", "dep:sha2"]
+sha-512 = ["dep:digest", "dep:hybrid-array", "dep:lazy_static", "dep:sha2"]
 # This enables support for the SHA3-224 hash function via the sha3 crate.
 sha3-224 = ["dep:digest", "dep:lazy_static", "dep:sha3"]
 # This enables support for the SHA3-256 hash function via the sha3 crate.
@@ -47,48 +52,65 @@ sha3-384 = ["dep:digest", "dep:lazy_static", "dep:sha3"]
 sha3-512 = ["dep:digest", "dep:lazy_static", "dep:sha3"]
 
 [dependencies]
-base64 = { version = "0.21.4", default-features = false }
-blake3 = { version = "1.4.1", optional = true, default-features = false, features = [
-    "std",
+base64 = { workspace = true, default-features = false }
+blake3 = { workspace = true, optional = true, default-features = false, features = [
+    "traits-preview",
 ] }
-derive_more = { version = "0.99.17", default-features = false, features = [
+derive_more = { workspace = true, default-features = false, features = [
     "deref",
     "display",
     "from",
     "into",
 ] }
-digest = { version = "0.10.7", optional = true }
-jsonpath_lib = { version = "0.3.0", optional = true }
-lazy_static = { version = "1.4", optional = true, default-features = false }
-mbx = { version = "0.1.1", optional = true, features = ["serde"] }
-pneutype = "0.5.1"
-serde = { version = "1.0", optional = true, default-features = false, features = [
-    "alloc",
-    "derive",
-] }
-serde_json = { version = "1.0.106", optional = true }
-serde_json_canonicalizer = { version = "0.2.0", optional = true }
-serde_with = { version = "3.3.0", optional = true, default-features = false, features = [
+digest = { workspace = true, optional = true }
+digest-io = { workspace = true, optional = true }
+hybrid-array = { workspace = true, optional = true }
+jsonpath_lib = { workspace = true, optional = true }
+lazy_static = { workspace = true, optional = true }
+mbx = { workspace = true, optional = true, features = ["serde"] }
+pneutype = { workspace = true }
+serde = { workspace = true, optional = true, features = ["derive"] }
+serde_json = { workspace = true, optional = true }
+serde_json_canonicalizer = { workspace = true, optional = true }
+serde_with = { workspace = true, optional = true, default-features = false, features = [
     "macros",
 ] }
-sha2 = { version = "0.10.9", optional = true }
-sha3 = { version = "0.10.8", optional = true }
-ssi-multicodec = { version = "0.2.0", optional = true }
+sha2 = { workspace = true, optional = true }
+sha3 = { workspace = true, optional = true }
+ssi-multicodec = { workspace = true, optional = true }
 
 [dev-dependencies]
-mbx = { version = "0.1.0", features = ["codec-str"] }
-maplit = "1.0.2"
-serde = { version = "1.0", default-features = false, features = ["derive"] }
-serde_json = "1.0"
-serde_json_canonicalizer = "0.2.0"
-serde_with = { version = "3.3.0", default-features = false, features = [
+mbx = { workspace = true, features = ["codec-str"] }
+maplit = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_json_canonicalizer = { workspace = true }
+serde_with = { workspace = true, default-features = false, features = [
     "macros",
 ] }
-serial_test = "2.0.0"
-
-[patch.crates-io]
-mbx = { git = "https://github.com/LedgerDomain/mbx", rev = "mbx-v0.1.1" }
-pneutype = { git = "https://github.com/vdods/pneutype", rev = "pneutype-v0.5.1" }
+serial_test = { workspace = true }
 
 [workspace]
 members = [".", "selfhash-bin"]
+
+[workspace.dependencies]
+base64 = { version = "0.21.4", default-features = false }
+blake3 = { version = "1.8.5", default-features = false }
+clap = "4.5.17"
+derive_more = { version = "0.99.17", default-features = false }
+digest = "0.11.3"
+digest-io = "0.1.0"
+hybrid-array = "0.4.12"
+jsonpath_lib = "0.3.0"
+lazy_static = "1.4"
+maplit = "1.0.2"
+mbx = { git = "https://github.com/LedgerDomain/mbx", rev = "mbx-v0.2.1" }
+pneutype = { git = "https://github.com/vdods/pneutype", rev = "pneutype-v0.5.1" }
+serde = "1.0"
+serde_json = "1.0.106"
+serde_json_canonicalizer = "0.2.0"
+serde_with = { version = "3.3.0", default-features = false }
+serial_test = "2.0.0"
+sha2 = "0.11.0"
+sha3 = "0.12.0"
+ssi-multicodec = "0.2.0"

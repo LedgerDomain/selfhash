@@ -4,7 +4,7 @@ use crate::HasherDynT;
 
 #[cfg(feature = "sha-224")]
 lazy_static::lazy_static! {
-    static ref SHA224_PLACEHOLDER: SHA224Hash = SHA224Hash::from(SHA224HashInner::default());
+    static ref SHA224_PLACEHOLDER: SHA224Hash = SHA224Hash::default();
 }
 
 //
@@ -88,8 +88,7 @@ impl HasherDynT for sha2::Sha224 {
 
 #[cfg(feature = "sha-224")]
 #[allow(non_camel_case_types)]
-pub type SHA224HashInner =
-    digest::generic_array::GenericArray<u8, <sha2::Sha224 as digest::OutputSizeUser>::OutputSize>;
+pub type SHA224HashInner = hybrid_array::ArrayN<u8, 28>;
 
 //
 // SHA224Hash
@@ -100,7 +99,9 @@ pub type SHA224HashInner =
 /// but mean a different thing.
 #[cfg(feature = "sha-224")]
 #[allow(non_camel_case_types)]
-#[derive(Clone, Debug, derive_more::Deref, derive_more::From, Eq, derive_more::Into, PartialEq)]
+#[derive(
+    Clone, Debug, Default, derive_more::Deref, derive_more::From, Eq, derive_more::Into, PartialEq,
+)]
 pub struct SHA224Hash(pub(crate) SHA224HashInner);
 
 #[cfg(feature = "sha-224")]

@@ -10,16 +10,18 @@ pub fn write_digest_data_using_jcs<
     S: Clone + SelfHashableT<HashRef> + serde::Serialize,
 >(
     self_hashable: &S,
-    mut hasher: &mut <<HashRef as HashRefT>::HashFunction as crate::HashFunctionT<HashRef>>::Hasher,
-) -> Result<()> {
+    hasher: &mut <<HashRef as HashRefT>::HashFunction as crate::HashFunctionT<HashRef>>::Hasher,
+) -> Result<()>
+where
+    for<'a> &'a mut <<HashRef as HashRefT>::HashFunction as HashFunctionT<HashRef>>::Hasher:
+        digest::Update,
+{
     let mut c = self_hashable.clone();
     use crate::HashFunctionT;
     c.set_self_hash_slots_to(hasher.hash_function().placeholder_hash().as_ref())?;
-    // Use JCS to produce canonical output.  The `&mut hasher` ridiculousness is because
-    // serde_json_canonicalizer::to_writer uses a generic impl of std::io::Write and therefore
-    // implicitly requires the `Sized` trait.  Therefore passing in a reference to the reference
-    // achieves the desired effect.
-    serde_json_canonicalizer::to_writer(&c, &mut hasher)
+    // Use JCS to produce canonical output.
+    let mut writer = digest_io::IoWrapper(hasher);
+    serde_json_canonicalizer::to_writer(&c, &mut writer)
         .map_err(|e| error!("Failed to write digest data using JCS; error was {}", e))?;
     Ok(())
 }

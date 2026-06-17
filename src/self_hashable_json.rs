@@ -216,7 +216,7 @@ impl<'v, 'w: 'v> SelfHashableJSON<'v, 'w> {
 impl SelfHashableT<mbx::MBHashStr> for SelfHashableJSON<'_, '_> {
     fn write_digest_data(
         &self,
-        mut hasher: &mut <<mbx::MBHashStr as HashRefT>::HashFunction as HashFunctionT<
+        hasher: &mut <<mbx::MBHashStr as HashRefT>::HashFunction as HashFunctionT<
             mbx::MBHashStr,
         >>::Hasher,
     ) -> Result<()> {
@@ -228,11 +228,9 @@ impl SelfHashableT<mbx::MBHashStr> for SelfHashableJSON<'_, '_> {
         use crate::HasherT;
         let placeholder_hash = hasher.hash_function().placeholder_hash();
         c.set_self_hash_slots_to(placeholder_hash.as_ref())?;
-        // Use JCS to produce canonical output.  The `&mut hasher` ridiculousness is because
-        // serde_json_canonicalizer::to_writer uses a generic impl of std::io::Write and therefore
-        // implicitly requires the `Sized` trait.  Therefore passing in a reference to the reference
-        // achieves the desired effect.
-        serde_json_canonicalizer::to_writer(&c.value, &mut hasher)?;
+        // Use JCS to produce canonical output.
+        let mut writer = digest_io::IoWrapper(hasher);
+        serde_json_canonicalizer::to_writer(&c.value, &mut writer)?;
         Ok(())
     }
     fn self_hash_oi<'a, 'b: 'a>(

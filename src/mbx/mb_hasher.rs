@@ -36,7 +36,7 @@ impl HasherT for MBHasher {
         MBHashFunction::new(self.base, self.codec).expect("programmer error")
     }
     fn update(&mut self, byte_v: &[u8]) {
-        self.hasher_b.update(byte_v);
+        HasherDynT::update(self.hasher_b.as_mut(), byte_v);
     }
     fn finalize(self) -> <Self::HashRef as ToOwned>::Owned {
         let hash_b = self.hasher_b.finalize();
@@ -46,11 +46,14 @@ impl HasherT for MBHasher {
     }
 }
 
-impl std::io::Write for MBHasher {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.hasher_b.write(buf)
+impl digest::Update for MBHasher {
+    fn update(&mut self, byte_v: &[u8]) {
+        HasherDynT::update(self.hasher_b.as_mut(), byte_v);
     }
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.hasher_b.flush()
+}
+
+impl digest::Update for &mut MBHasher {
+    fn update(&mut self, byte_v: &[u8]) {
+        HasherDynT::update(self.hasher_b.as_mut(), byte_v);
     }
 }

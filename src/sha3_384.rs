@@ -88,8 +88,7 @@ impl HasherDynT for sha3::Sha3_384 {
 
 #[cfg(feature = "sha3-384")]
 #[allow(non_camel_case_types)]
-pub type SHA3_384_HashInner =
-    digest::generic_array::GenericArray<u8, <sha3::Sha3_384 as digest::OutputSizeUser>::OutputSize>;
+pub type SHA3_384_HashInner = hybrid_array::ArrayN<u8, 48>;
 
 //
 // SHA3_384_Hash

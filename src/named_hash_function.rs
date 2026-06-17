@@ -167,12 +167,3 @@ impl HashFunctionT<mbx::MBHashStr> for NamedHashFunction {
 //         )
 //     }
 // }
-
-// impl std::io::Write for HashBytesHasher {
-//     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-//         self.hasher_b.write(buf)
-//     }
-//     fn flush(&mut self) -> std::io::Result<()> {
-//         self.hasher_b.flush()
-//     }
-// }

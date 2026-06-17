@@ -88,8 +88,7 @@ impl HasherDynT for sha2::Sha384 {
 
 #[cfg(feature = "sha-384")]
 #[allow(non_camel_case_types)]
-pub type SHA384HashInner =
-    digest::generic_array::GenericArray<u8, <sha2::Sha384 as digest::OutputSizeUser>::OutputSize>;
+pub type SHA384HashInner = hybrid_array::ArrayN<u8, 48>;
 
 //
 // SHA384Hash
