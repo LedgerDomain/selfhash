@@ -590,14 +590,15 @@ checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "mbx"
-version = "0.3.0"
-source = "git+https://github.com/LedgerDomain/mbx?rev=mbx-v0.3.0#357c662f67dcd2cc09246baf2391412b89c02bc7"
+version = "0.4.0"
+source = "git+https://github.com/LedgerDomain/mbx?rev=mbx-v0.4.0#2f55bbb8f252476f6e7547586284fd7cc47f0dd5"
 dependencies = [
  "multibase",
  "multihash",
  "pneutype",
  "serde",
  "ssi-multicodec",
+ "zeroize",
 ]
 
 [[package]]
@@ -670,16 +671,16 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pneutype"
-version = "0.5.1"
-source = "git+https://github.com/vdods/pneutype?rev=pneutype-v0.5.1#765cee3ca578fdbae0afd3c3ed973a6707600897"
+version = "0.6.0"
+source = "git+https://github.com/vdods/pneutype?rev=pneutype-v0.6.0#47461243f3b72be5870c6125f947a5cfdf98cc89"
 dependencies = [
  "pneutype-derive",
 ]
 
 [[package]]
 name = "pneutype-derive"
-version = "0.5.1"
-source = "git+https://github.com/vdods/pneutype?rev=pneutype-v0.5.1#765cee3ca578fdbae0afd3c3ed973a6707600897"
+version = "0.6.0"
+source = "git+https://github.com/vdods/pneutype?rev=pneutype-v0.6.0#47461243f3b72be5870c6125f947a5cfdf98cc89"
 dependencies = [
  "darling 0.13.4",
  "proc-macro2",
@@ -734,7 +735,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "selfhash"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "base64",
  "blake3",
@@ -759,7 +760,7 @@ dependencies = [
 
 [[package]]
 name = "selfhash-bin"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "clap",
  "maplit",
@@ -1132,3 +1133,23 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+
+[[package]]
+name = "zeroize"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e"
+dependencies = [
+ "zeroize_derive",
+]
+
+[[package]]
+name = "zeroize_derive"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c50655cbb0fe3fc43170059e702f1ce5e19b84cec58dc87b037a09935c2f328"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+]
