@@ -590,8 +590,8 @@ checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "mbx"
-version = "0.4.0"
-source = "git+https://github.com/LedgerDomain/mbx?rev=mbx-v0.4.0#2f55bbb8f252476f6e7547586284fd7cc47f0dd5"
+version = "0.5.0"
+source = "git+https://github.com/LedgerDomain/mbx?rev=mbx-v0.5.0#8f5dc2c43dd02f6ac50a3b373fb50b4788a6d462"
 dependencies = [
  "multibase",
  "multihash",
@@ -735,7 +735,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "selfhash"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "base64",
  "blake3",
@@ -760,7 +760,7 @@ dependencies = [
 
 [[package]]
 name = "selfhash-bin"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "clap",
  "maplit",
